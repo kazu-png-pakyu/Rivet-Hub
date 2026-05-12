@@ -61,8 +61,7 @@ local CraftingService     = GameEvents:WaitForChild("CraftingGlobalObjectService
 local BonfireService      = GameEvents:WaitForChild("BonfireService")
 local SprayService_RE     = GameEvents:WaitForChild("SprayService_RE")
 
--- ===== LOAD OBSIDIAN UI =====
-local Obsidian = loadstring(game:HttpGet("https://raw.githubusercontent.com/richie0866/Obsidian/master/public/latest/bundle.lua"))()
+-- ===== CUSTOM GUI (Obsidian-style) =====
 
 -- ===== STATE =====
 local selectedPets    = {}
@@ -919,682 +918,1034 @@ local function sellHatchedPets()
 	notify("SellHatched", "Sold " .. count .. " hatched pets")
 end
 
--- ============================================================
--- OBSIDIAN UI SETUP
--- ============================================================
-local Screen = Obsidian.new()
-local Window = Screen:Window({
-	Title = "Rivet Hub 2",
-	Size  = Vector2.new(540, 600),
-})
 
 -- ============================================================
+-- CUSTOM GUI ENGINE (Obsidian-style, no external library)
+-- ============================================================
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- ===== THEME =====
+local THEME = {
+	BG          = Color3.fromRGB(15, 15, 20),
+	SIDEBAR     = Color3.fromRGB(20, 20, 28),
+	TAB_ACTIVE  = Color3.fromRGB(99, 102, 241),
+	TAB_HOVER   = Color3.fromRGB(40, 40, 55),
+	TAB_IDLE    = Color3.fromRGB(20, 20, 28),
+	SECTION     = Color3.fromRGB(28, 28, 38),
+	ELEMENT     = Color3.fromRGB(35, 35, 48),
+	ELEMENT_HOV = Color3.fromRGB(45, 45, 62),
+	ACCENT      = Color3.fromRGB(99, 102, 241),
+	ACCENT2     = Color3.fromRGB(139, 92, 246),
+	TEXT        = Color3.fromRGB(240, 240, 255),
+	TEXT_DIM    = Color3.fromRGB(140, 140, 165),
+	TOGGLE_ON   = Color3.fromRGB(99, 102, 241),
+	TOGGLE_OFF  = Color3.fromRGB(55, 55, 70),
+	INPUT_BG    = Color3.fromRGB(22, 22, 32),
+	BORDER      = Color3.fromRGB(50, 50, 70),
+	CLOSE       = Color3.fromRGB(239, 68, 68),
+	TITLE_BAR   = Color3.fromRGB(18, 18, 26),
+}
+
+local FONT      = Enum.Font.GothamMedium
+local FONT_BOLD = Enum.Font.GothamBold
+local FONT_SEMI = Enum.Font.Gotham
+
+-- ===== UTILITY =====
+local function make(class, props, parent)
+	local obj = Instance.new(class)
+	for k, v in pairs(props) do obj[k] = v end
+	if parent then obj.Parent = parent end
+	return obj
+end
+
+local function corner(r, parent)
+	return make("UICorner", { CornerRadius = UDim.new(0, r) }, parent)
+end
+
+local function stroke(color, thickness, parent)
+	return make("UIStroke", { Color = color, Thickness = thickness }, parent)
+end
+
+local function padding(t, b, l, r, parent)
+	return make("UIPadding", {
+		PaddingTop    = UDim.new(0, t),
+		PaddingBottom = UDim.new(0, b),
+		PaddingLeft   = UDim.new(0, l),
+		PaddingRight  = UDim.new(0, r),
+	}, parent)
+end
+
+local function tween(obj, props, t)
+	game:GetService("TweenService"):Create(obj,
+		TweenInfo.new(t or 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		props
+	):Play()
+end
+
+-- ===== SCREEN GUI =====
+local ScreenGui = make("ScreenGui", {
+	Name            = "RivetHub2",
+	ResetOnSpawn    = false,
+	ZIndexBehavior  = Enum.ZIndexBehavior.Sibling,
+	DisplayOrder    = 999,
+}, playerGui)
+
+-- ===== MAIN WINDOW =====
+local MainFrame = make("Frame", {
+	Name              = "MainFrame",
+	Size              = UDim2.new(0, 620, 0, 520),
+	Position          = UDim2.new(0.5, -310, 0.5, -260),
+	BackgroundColor3  = THEME.BG,
+	BorderSizePixel   = 0,
+	ClipsDescendants  = true,
+}, ScreenGui)
+corner(10, MainFrame)
+stroke(THEME.BORDER, 1, MainFrame)
+
+-- Drop shadow
+local Shadow = make("ImageLabel", {
+	Name              = "Shadow",
+	Size              = UDim2.new(1, 30, 1, 30),
+	Position          = UDim2.new(0, -15, 0, -15),
+	BackgroundTransparency = 1,
+	Image             = "rbxassetid://6014261993",
+	ImageColor3       = Color3.fromRGB(0, 0, 0),
+	ImageTransparency = 0.5,
+	ScaleType         = Enum.ScaleType.Slice,
+	SliceCenter       = Rect.new(49, 49, 450, 450),
+	ZIndex            = 0,
+}, MainFrame)
+
+-- ===== TITLE BAR =====
+local TitleBar = make("Frame", {
+	Name             = "TitleBar",
+	Size             = UDim2.new(1, 0, 0, 42),
+	BackgroundColor3 = THEME.TITLE_BAR,
+	BorderSizePixel  = 0,
+}, MainFrame)
+
+-- Accent line under title
+make("Frame", {
+	Size             = UDim2.new(1, 0, 0, 1),
+	Position         = UDim2.new(0, 0, 1, -1),
+	BackgroundColor3 = THEME.ACCENT,
+	BorderSizePixel  = 0,
+}, TitleBar)
+
+-- Logo dot
+local LogoDot = make("Frame", {
+	Size             = UDim2.new(0, 10, 0, 10),
+	Position         = UDim2.new(0, 14, 0.5, -5),
+	BackgroundColor3 = THEME.ACCENT,
+	BorderSizePixel  = 0,
+}, TitleBar)
+corner(5, LogoDot)
+
+local TitleLabel = make("TextLabel", {
+	Text             = "Rivet Hub 2",
+	Font             = FONT_BOLD,
+	TextSize         = 15,
+	TextColor3       = THEME.TEXT,
+	BackgroundTransparency = 1,
+	Size             = UDim2.new(1, -100, 1, 0),
+	Position         = UDim2.new(0, 32, 0, 0),
+	TextXAlignment   = Enum.TextXAlignment.Left,
+}, TitleBar)
+
+local SubLabel = make("TextLabel", {
+	Text             = "Grow a Garden",
+	Font             = FONT_SEMI,
+	TextSize         = 11,
+	TextColor3       = THEME.TEXT_DIM,
+	BackgroundTransparency = 1,
+	Size             = UDim2.new(0, 200, 1, 0),
+	Position         = UDim2.new(0, 130, 0, 0),
+	TextXAlignment   = Enum.TextXAlignment.Left,
+}, TitleBar)
+
+-- Close button
+local CloseBtn = make("TextButton", {
+	Text             = "✕",
+	Font             = FONT_BOLD,
+	TextSize         = 13,
+	TextColor3       = THEME.TEXT_DIM,
+	BackgroundColor3 = THEME.TITLE_BAR,
+	BorderSizePixel  = 0,
+	Size             = UDim2.new(0, 32, 0, 32),
+	Position         = UDim2.new(1, -38, 0.5, -16),
+}, TitleBar)
+corner(6, CloseBtn)
+
+CloseBtn.MouseEnter:Connect(function()
+	tween(CloseBtn, { BackgroundColor3 = THEME.CLOSE, TextColor3 = Color3.new(1,1,1) })
+end)
+CloseBtn.MouseLeave:Connect(function()
+	tween(CloseBtn, { BackgroundColor3 = THEME.TITLE_BAR, TextColor3 = THEME.TEXT_DIM })
+end)
+CloseBtn.MouseButton1Click:Connect(function()
+	ScreenGui.Enabled = false
+end)
+
+-- Minimize button
+local MinBtn = make("TextButton", {
+	Text             = "−",
+	Font             = FONT_BOLD,
+	TextSize         = 16,
+	TextColor3       = THEME.TEXT_DIM,
+	BackgroundColor3 = THEME.TITLE_BAR,
+	BorderSizePixel  = 0,
+	Size             = UDim2.new(0, 32, 0, 32),
+	Position         = UDim2.new(1, -74, 0.5, -16),
+}, TitleBar)
+corner(6, MinBtn)
+
+local minimized = false
+MinBtn.MouseEnter:Connect(function()
+	tween(MinBtn, { BackgroundColor3 = THEME.ELEMENT_HOV, TextColor3 = THEME.TEXT })
+end)
+MinBtn.MouseLeave:Connect(function()
+	tween(MinBtn, { BackgroundColor3 = THEME.TITLE_BAR, TextColor3 = THEME.TEXT_DIM })
+end)
+MinBtn.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	if minimized then
+		tween(MainFrame, { Size = UDim2.new(0, 620, 0, 42) }, 0.2)
+	else
+		tween(MainFrame, { Size = UDim2.new(0, 620, 0, 520) }, 0.2)
+	end
+end)
+
+-- ===== DRAGGING =====
+local dragging, dragStart, startPos = false, nil, nil
+TitleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging  = true
+		dragStart = input.Position
+		startPos  = MainFrame.Position
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+		MainFrame.Position = UDim2.new(
+			startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+-- ===== SIDEBAR =====
+local Sidebar = make("Frame", {
+	Name             = "Sidebar",
+	Size             = UDim2.new(0, 140, 1, -42),
+	Position         = UDim2.new(0, 0, 0, 42),
+	BackgroundColor3 = THEME.SIDEBAR,
+	BorderSizePixel  = 0,
+}, MainFrame)
+
+-- Sidebar border
+make("Frame", {
+	Size             = UDim2.new(0, 1, 1, 0),
+	Position         = UDim2.new(1, -1, 0, 0),
+	BackgroundColor3 = THEME.BORDER,
+	BorderSizePixel  = 0,
+}, Sidebar)
+
+local SidebarList = make("Frame", {
+	Size             = UDim2.new(1, 0, 1, 0),
+	BackgroundTransparency = 1,
+}, Sidebar)
+make("UIListLayout", {
+	SortOrder        = Enum.SortOrder.LayoutOrder,
+	Padding          = UDim.new(0, 2),
+}, SidebarList)
+padding(8, 8, 6, 6, SidebarList)
+
+-- ===== CONTENT AREA =====
+local ContentArea = make("Frame", {
+	Name             = "ContentArea",
+	Size             = UDim2.new(1, -140, 1, -42),
+	Position         = UDim2.new(0, 140, 0, 42),
+	BackgroundColor3 = THEME.BG,
+	BorderSizePixel  = 0,
+	ClipsDescendants = true,
+}, MainFrame)
+
+-- ===== GUI BUILDER =====
+local activeTab     = nil
+local tabFrames     = {}
+local tabButtons    = {}
+local labelRefs     = {}
+
+local function createTabButton(title, icon)
+	local btn = make("TextButton", {
+		Text             = (icon and icon .. "  " or "") .. title,
+		Font             = FONT_SEMI,
+		TextSize         = 12,
+		TextColor3       = THEME.TEXT_DIM,
+		BackgroundColor3 = THEME.TAB_IDLE,
+		BorderSizePixel  = 0,
+		Size             = UDim2.new(1, 0, 0, 34),
+		TextXAlignment   = Enum.TextXAlignment.Left,
+		AutoButtonColor  = false,
+	}, SidebarList)
+	corner(6, btn)
+	padding(0, 0, 10, 6, btn)
+	return btn
+end
+
+local function createScrollFrame(parent)
+	local scroll = make("ScrollingFrame", {
+		Size                  = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		BorderSizePixel       = 0,
+		ScrollBarThickness    = 3,
+		ScrollBarImageColor3  = THEME.ACCENT,
+		CanvasSize            = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize   = Enum.AutomaticSize.Y,
+	}, parent)
+	local list = make("UIListLayout", {
+		SortOrder  = Enum.SortOrder.LayoutOrder,
+		Padding    = UDim.new(0, 6),
+	}, scroll)
+	padding(10, 10, 10, 10, scroll)
+	return scroll, list
+end
+
+local function switchTab(tabName)
+	for name, frame in pairs(tabFrames) do
+		frame.Visible = (name == tabName)
+	end
+	for name, btn in pairs(tabButtons) do
+		if name == tabName then
+			tween(btn, { BackgroundColor3 = THEME.TAB_ACTIVE, TextColor3 = Color3.new(1,1,1) })
+		else
+			tween(btn, { BackgroundColor3 = THEME.TAB_IDLE, TextColor3 = THEME.TEXT_DIM })
+		end
+	end
+	activeTab = tabName
+end
+
+-- ===== ELEMENT BUILDERS =====
+local function addLabel(scroll, text)
+	local lbl = make("TextLabel", {
+		Text             = text,
+		Font             = FONT_SEMI,
+		TextSize         = 12,
+		TextColor3       = THEME.TEXT_DIM,
+		BackgroundTransparency = 1,
+		Size             = UDim2.new(1, 0, 0, 18),
+		TextXAlignment   = Enum.TextXAlignment.Left,
+		TextWrapped      = true,
+		AutomaticSize    = Enum.AutomaticSize.Y,
+	}, scroll)
+	return {
+		SetText = function(_, t) lbl.Text = t end,
+		Set     = function(_, t) lbl.Text = t end,
+	}
+end
+
+local function addSection(scroll, title)
+	local sec = make("Frame", {
+		Size             = UDim2.new(1, 0, 0, 28),
+		BackgroundTransparency = 1,
+	}, scroll)
+	make("TextLabel", {
+		Text             = title:upper(),
+		Font             = FONT_BOLD,
+		TextSize         = 10,
+		TextColor3       = THEME.ACCENT,
+		BackgroundTransparency = 1,
+		Size             = UDim2.new(1, 0, 1, 0),
+		TextXAlignment   = Enum.TextXAlignment.Left,
+	}, sec)
+	make("Frame", {
+		Size             = UDim2.new(1, 0, 0, 1),
+		Position         = UDim2.new(0, 0, 1, -1),
+		BackgroundColor3 = THEME.BORDER,
+		BorderSizePixel  = 0,
+	}, sec)
+end
+
+local function addButton(scroll, title, cb)
+	local btn = make("TextButton", {
+		Text             = title,
+		Font             = FONT_SEMI,
+		TextSize         = 12,
+		TextColor3       = THEME.TEXT,
+		BackgroundColor3 = THEME.ELEMENT,
+		BorderSizePixel  = 0,
+		Size             = UDim2.new(1, 0, 0, 32),
+		AutoButtonColor  = false,
+	}, scroll)
+	corner(6, btn)
+	stroke(THEME.BORDER, 1, btn)
+	btn.MouseEnter:Connect(function()
+		tween(btn, { BackgroundColor3 = THEME.ACCENT })
+	end)
+	btn.MouseLeave:Connect(function()
+		tween(btn, { BackgroundColor3 = THEME.ELEMENT })
+	end)
+	btn.MouseButton1Click:Connect(function()
+		tween(btn, { BackgroundColor3 = THEME.ACCENT2 }, 0.05)
+		task.wait(0.1)
+		tween(btn, { BackgroundColor3 = THEME.ELEMENT }, 0.1)
+		if cb then cb() end
+	end)
+end
+
+local function addToggle(scroll, title, default, cb)
+	local state = default or false
+	local row = make("Frame", {
+		Size             = UDim2.new(1, 0, 0, 32),
+		BackgroundColor3 = THEME.ELEMENT,
+		BorderSizePixel  = 0,
+	}, scroll)
+	corner(6, row)
+	stroke(THEME.BORDER, 1, row)
+
+	make("TextLabel", {
+		Text             = title,
+		Font             = FONT_SEMI,
+		TextSize         = 12,
+		TextColor3       = THEME.TEXT,
+		BackgroundTransparency = 1,
+		Size             = UDim2.new(1, -52, 1, 0),
+		Position         = UDim2.new(0, 10, 0, 0),
+		TextXAlignment   = Enum.TextXAlignment.Left,
+	}, row)
+
+	local track = make("Frame", {
+		Size             = UDim2.new(0, 36, 0, 18),
+		Position         = UDim2.new(1, -46, 0.5, -9),
+		BackgroundColor3 = state and THEME.TOGGLE_ON or THEME.TOGGLE_OFF,
+		BorderSizePixel  = 0,
+	}, row)
+	corner(9, track)
+
+	local knob = make("Frame", {
+		Size             = UDim2.new(0, 14, 0, 14),
+		Position         = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel  = 0,
+	}, track)
+	corner(7, knob)
+
+	local function updateVisual()
+		tween(track, { BackgroundColor3 = state and THEME.TOGGLE_ON or THEME.TOGGLE_OFF })
+		tween(knob, { Position = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7) })
+	end
+
+	local btn = make("TextButton", {
+		Text             = "",
+		BackgroundTransparency = 1,
+		Size             = UDim2.new(1, 0, 1, 0),
+	}, row)
+	btn.MouseButton1Click:Connect(function()
+		state = not state
+		updateVisual()
+		if cb then cb(state) end
+	end)
+end
+
+local function addInput(scroll, title, placeholder, cb)
+	local wrap = make("Frame", {
+		Size             = UDim2.new(1, 0, 0, 52),
+		BackgroundTransparency = 1,
+	}, scroll)
+
+	make("TextLabel", {
+		Text             = title,
+		Font             = FONT_SEMI,
+		TextSize         = 11,
+		TextColor3       = THEME.TEXT_DIM,
+		BackgroundTransparency = 1,
+		Size             = UDim2.new(1, 0, 0, 18),
+		TextXAlignment   = Enum.TextXAlignment.Left,
+	}, wrap)
+
+	local box = make("TextBox", {
+		PlaceholderText  = placeholder or "",
+		Text             = "",
+		Font             = FONT_SEMI,
+		TextSize         = 12,
+		TextColor3       = THEME.TEXT,
+		PlaceholderColor3 = THEME.TEXT_DIM,
+		BackgroundColor3 = THEME.INPUT_BG,
+		BorderSizePixel  = 0,
+		Size             = UDim2.new(1, 0, 0, 28),
+		Position         = UDim2.new(0, 0, 0, 20),
+		ClearTextOnFocus = false,
+	}, wrap)
+	corner(6, box)
+	stroke(THEME.BORDER, 1, box)
+	padding(0, 0, 8, 8, box)
+
+	box.Focused:Connect(function()
+		tween(box, { BackgroundColor3 = THEME.ELEMENT })
+		stroke(THEME.ACCENT, 1, box)
+	end)
+	box.FocusLost:Connect(function(enter)
+		tween(box, { BackgroundColor3 = THEME.INPUT_BG })
+		if enter and cb then cb(box.Text) end
+	end)
+end
+
+local function addDropdown(scroll, title, values, multi, cb)
+	local selected = {}
+	local open = false
+
+	local wrap = make("Frame", {
+		Size             = UDim2.new(1, 0, 0, 32),
+		BackgroundColor3 = THEME.ELEMENT,
+		BorderSizePixel  = 0,
+		ClipsDescendants = false,
+		ZIndex           = 5,
+	}, scroll)
+	corner(6, wrap)
+	stroke(THEME.BORDER, 1, wrap)
+
+	local header = make("TextButton", {
+		Text             = title .. " ▾",
+		Font             = FONT_SEMI,
+		TextSize         = 12,
+		TextColor3       = THEME.TEXT,
+		BackgroundTransparency = 1,
+		Size             = UDim2.new(1, 0, 0, 32),
+		TextXAlignment   = Enum.TextXAlignment.Left,
+		AutoButtonColor  = false,
+		ZIndex           = 6,
+	}, wrap)
+	padding(0, 0, 10, 10, header)
+
+	local dropdown = make("Frame", {
+		Size             = UDim2.new(1, 0, 0, 0),
+		Position         = UDim2.new(0, 0, 1, 2),
+		BackgroundColor3 = THEME.SECTION,
+		BorderSizePixel  = 0,
+		ClipsDescendants = true,
+		Visible          = false,
+		ZIndex           = 10,
+	}, wrap)
+	corner(6, dropdown)
+	stroke(THEME.BORDER, 1, dropdown)
+
+	local ddScroll = make("ScrollingFrame", {
+		Size                  = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		BorderSizePixel       = 0,
+		ScrollBarThickness    = 2,
+		ScrollBarImageColor3  = THEME.ACCENT,
+		CanvasSize            = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize   = Enum.AutomaticSize.Y,
+		ZIndex                = 11,
+	}, dropdown)
+	make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 1) }, ddScroll)
+
+	local function updateHeader()
+		if multi then
+			header.Text = title .. " (" .. #selected .. " selected) ▾"
+		else
+			header.Text = title .. " ▾"
+		end
+	end
+
+	for _, val in ipairs(values) do
+		local item = make("TextButton", {
+			Text             = val,
+			Font             = FONT_SEMI,
+			TextSize         = 11,
+			TextColor3       = THEME.TEXT_DIM,
+			BackgroundColor3 = THEME.SECTION,
+			BorderSizePixel  = 0,
+			Size             = UDim2.new(1, 0, 0, 26),
+			TextXAlignment   = Enum.TextXAlignment.Left,
+			AutoButtonColor  = false,
+			ZIndex           = 12,
+		}, ddScroll)
+		padding(0, 0, 8, 8, item)
+
+		item.MouseEnter:Connect(function()
+			tween(item, { BackgroundColor3 = THEME.ELEMENT_HOV })
+		end)
+		item.MouseLeave:Connect(function()
+			local isSelected = table.find(selected, val)
+			tween(item, { BackgroundColor3 = isSelected and THEME.ACCENT or THEME.SECTION })
+		end)
+
+		item.MouseButton1Click:Connect(function()
+			if multi then
+				local idx = table.find(selected, val)
+				if idx then
+					table.remove(selected, idx)
+					tween(item, { BackgroundColor3 = THEME.SECTION, TextColor3 = THEME.TEXT_DIM })
+				else
+					table.insert(selected, val)
+					tween(item, { BackgroundColor3 = THEME.ACCENT, TextColor3 = Color3.new(1,1,1) })
+				end
+				updateHeader()
+				if cb then cb(selected) end
+			else
+				selected = { val }
+				updateHeader()
+				open = false
+				dropdown.Visible = false
+				wrap.Size = UDim2.new(1, 0, 0, 32)
+				if cb then cb(val) end
+			end
+		end)
+	end
+
+	-- Limit dropdown height to 180px
+	local ddHeight = math.min(#values * 27, 180)
+
+	header.MouseButton1Click:Connect(function()
+		open = not open
+		dropdown.Visible = open
+		if open then
+			dropdown.Size = UDim2.new(1, 0, 0, ddHeight)
+			wrap.Size = UDim2.new(1, 0, 0, 32 + ddHeight + 4)
+		else
+			dropdown.Size = UDim2.new(1, 0, 0, 0)
+			wrap.Size = UDim2.new(1, 0, 0, 32)
+		end
+	end)
+end
+
+local function addDivider(scroll)
+	make("Frame", {
+		Size             = UDim2.new(1, 0, 0, 1),
+		BackgroundColor3 = THEME.BORDER,
+		BorderSizePixel  = 0,
+	}, scroll)
+end
+
+-- ===== TAB FACTORY =====
+local function createTab(title, icon)
+	local btn = createTabButton(title, icon)
+	local frame = make("Frame", {
+		Size             = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		Visible          = false,
+	}, ContentArea)
+
+	local scroll, _ = createScrollFrame(frame)
+
+	tabFrames[title]  = frame
+	tabButtons[title] = btn
+
+	btn.MouseEnter:Connect(function()
+		if activeTab ~= title then
+			tween(btn, { BackgroundColor3 = THEME.TAB_HOVER, TextColor3 = THEME.TEXT })
+		end
+	end)
+	btn.MouseLeave:Connect(function()
+		if activeTab ~= title then
+			tween(btn, { BackgroundColor3 = THEME.TAB_IDLE, TextColor3 = THEME.TEXT_DIM })
+		end
+	end)
+	btn.MouseButton1Click:Connect(function()
+		switchTab(title)
+	end)
+
+	return {
+		Label    = function(_, t)        return addLabel(scroll, t) end,
+		Section  = function(_, t)        addSection(scroll, t) end,
+		Button   = function(_, t, cb)    addButton(scroll, t, cb) end,
+		Toggle   = function(_, t, d, cb) addToggle(scroll, t, d, cb) end,
+		Input    = function(_, t, p, cb) addInput(scroll, t, p, cb) end,
+		Dropdown = function(_, t, v, m, cb) addDropdown(scroll, t, v, m, cb) end,
+		Divider  = function(_)           addDivider(scroll) end,
+	}
+end
+
+-- Shorthand aliases so existing code works
+local function Tab(title, icon) return createTab(title, icon) end
+
+-- ============================================================
+-- BUILD ALL TABS
+-- ============================================================
+
 -- TAB 1: SNIPE PETS
--- ============================================================
-local SnipeTab = Window:Tab({ Title = "Snipe Pets" })
-
-local snipeStatusLabel = SnipeTab:Label({ Text = "Status: IDLE | Selected: 0 pets" })
-
-SnipeTab:Dropdown({ Title = "Select Pets to Snipe", Values = PET_LIST, Multi = true,
-	Callback = function(val)
-		selectedPets = val
-		snipeStatusLabel:SetText("Status: " .. (isAutoSniping and "ACTIVE" or "IDLE") .. " | Selected: " .. #val .. " pets")
-	end })
-
-SnipeTab:Button({ Title = "Clear Pet Selection", Callback = function()
+local SnipeTab = Tab("Snipe Pets", "🎯")
+local snipeStatusLabel = SnipeTab:Label("Status: IDLE | Selected: 0 pets")
+SnipeTab:Section("Pet Selection")
+SnipeTab:Dropdown("Select Pets to Snipe", PET_LIST, true, function(val)
+	selectedPets = val
+	snipeStatusLabel:Set("Status: "..(isAutoSniping and "ACTIVE" or "IDLE").." | Selected: "..#val.." pets")
+end)
+SnipeTab:Button("Clear Pet Selection", function()
 	selectedPets = {}
-	snipeStatusLabel:SetText("Status: IDLE | Selected: 0 pets")
-end })
-
-SnipeTab:Button({ Title = "START SNIPING", Callback = function()
+	snipeStatusLabel:Set("Status: IDLE | Selected: 0 pets")
+end)
+SnipeTab:Section("Controls")
+SnipeTab:Button("▶  START SNIPING", function()
 	if #selectedPets == 0 then notify("Error","Select pets first!") return end
 	if isAutoSniping then return end
 	isAutoSniping = true
-	snipeStatusLabel:SetText("Status: ACTIVE | Selected: " .. #selectedPets .. " pets")
+	snipeStatusLabel:Set("Status: ACTIVE | Selected: "..#selectedPets.." pets")
 	notify("Snipe","Started! F6 to stop.")
 	task.spawn(snipeLoop)
-end })
-
-SnipeTab:Button({ Title = "STOP SNIPING", Callback = function()
+end)
+SnipeTab:Button("⏹  STOP SNIPING", function()
 	isAutoSniping = false
-	snipeStatusLabel:SetText("Status: IDLE | Selected: " .. #selectedPets .. " pets")
+	snipeStatusLabel:Set("Status: IDLE | Selected: "..#selectedPets.." pets")
 	notify("Snipe","Stopped.")
-end })
+end)
+SnipeTab:Section("Filters")
+SnipeTab:Input("Max Buy Price (tokens)", "e.g. 50000", function(v) local n=tonumber(v) if n then settings.maxPrice=n end end)
+SnipeTab:Input("Min KG", "e.g. 0", function(v) local n=tonumber(v) if n then settings.minKG=n end end)
+SnipeTab:Input("Max KG", "e.g. 10000", function(v) local n=tonumber(v) if n then settings.maxKG=n end end)
+SnipeTab:Input("Snipe Speed (1-20x)", "Default: 1", function(v) local n=tonumber(v) if n then settings.snipeSpeed=math.clamp(n,1,20) end end)
+SnipeTab:Toggle("Auto Teleport to Pet", false, function(v) settings.autoTeleport=v end)
+SnipeTab:Toggle("Auto Rejoin After Snipe", false, function(v) settings.autoRejoin=v end)
 
-SnipeTab:Input({ Title = "Max Buy Price (tokens)", Placeholder = "e.g. 50000",
-	Callback = function(v) local n = tonumber(v) if n then settings.maxPrice = n end end })
-SnipeTab:Input({ Title = "Min KG", Placeholder = "e.g. 0",
-	Callback = function(v) local n = tonumber(v) if n then settings.minKG = n end end })
-SnipeTab:Input({ Title = "Max KG", Placeholder = "e.g. 10000",
-	Callback = function(v) local n = tonumber(v) if n then settings.maxKG = n end end })
-SnipeTab:Input({ Title = "Snipe Speed (1-20x)", Placeholder = "Default: 1",
-	Callback = function(v) local n = tonumber(v) if n then settings.snipeSpeed = math.clamp(n,1,20) end end })
-SnipeTab:Toggle({ Title = "Auto Teleport to Pet", Default = false,
-	Callback = function(v) settings.autoTeleport = v end })
-SnipeTab:Toggle({ Title = "Auto Rejoin After Snipe", Default = false,
-	Callback = function(v) settings.autoRejoin = v end })
-
--- ============================================================
 -- TAB 2: BOOTHS
--- ============================================================
-local BoothsTab = Window:Tab({ Title = "Booths" })
-
-local scanFilterLabel = BoothsTab:Label({ Text = "Filter: All 364 pets" })
-local scanResultLabel = BoothsTab:Label({ Text = "Press Scan to find pets" })
-
-BoothsTab:Dropdown({ Title = "Scan Filter (empty = all pets)", Values = PET_LIST, Multi = true,
-	Callback = function(val)
-		scanPets = val
-		scanFilterLabel:SetText("Filter: " .. (#val == 0 and "All 364 pets" or #val .. " pets selected"))
-	end })
-
-BoothsTab:Button({ Title = "Clear Scan Filter", Callback = function()
+local BoothsTab = Tab("Booths", "🔍")
+local scanFilterLabel = BoothsTab:Label("Filter: All 364 pets")
+local scanResultLabel = BoothsTab:Label("Press Scan to find pets")
+BoothsTab:Section("Scan Filter")
+BoothsTab:Dropdown("Scan Filter (empty = all pets)", PET_LIST, true, function(val)
+	scanPets = val
+	scanFilterLabel:Set("Filter: "..(#val==0 and "All 364 pets" or #val.." pets selected"))
+end)
+BoothsTab:Button("Clear Scan Filter", function()
 	scanPets = {}
-	scanFilterLabel:SetText("Filter: All 364 pets")
-end })
-
-BoothsTab:Button({ Title = "Scan Booths Now", Callback = function()
+	scanFilterLabel:Set("Filter: All 364 pets")
+end)
+BoothsTab:Section("Scanner")
+BoothsTab:Button("Scan Booths Now", function()
 	task.spawn(function()
-		scanResultLabel:SetText("Scanning...")
+		scanResultLabel:Set("Scanning...")
 		local found = scanBooths()
-		local txt = "Found " .. found .. " pets:\n"
-		for i = 1, math.min(15, #boothsData) do
-			local b = boothsData[i]
-			txt = txt .. "(" .. b.Price .. ") " .. b.Name .. " (" .. b.KG .. "kg)\n"
+		local txt = "Found "..found.." pets:\n"
+		for i=1,math.min(15,#boothsData) do
+			local b=boothsData[i]
+			txt=txt.."("..b.Price..") "..b.Name.." ("..b.KG.."kg)\n"
 		end
-		if #boothsData > 15 then txt = txt .. "... +" .. (#boothsData-15) .. " more" end
-		scanResultLabel:SetText(txt)
+		if #boothsData>15 then txt=txt.."... +".. (#boothsData-15).." more" end
+		scanResultLabel:Set(txt)
 	end)
-end })
-
-BoothsTab:Toggle({ Title = "Auto Scan Every 5s", Default = false,
-	Callback = function(val)
-		isAutoScanning = val
-		if val then task.spawn(autoScanLoop) end
-		notify("AutoScan", val and "ON" or "OFF")
-	end })
-
--- ============================================================
--- TAB 3: PET TOOLS
--- ============================================================
-local PetTab = Window:Tab({ Title = "Pet Tools" })
-
-local petUUIDInput = ""
-PetTab:Input({ Title = "Pet UUID", Placeholder = "Paste UUID here",
-	Callback = function(v) petUUIDInput = v end })
-PetTab:Button({ Title = "Sell Pet (UUID)", Callback = function() sellPetByUUID(petUUIDInput) end })
-PetTab:Button({ Title = "Favorite Pet (UUID)", Callback = function() favoritePet(petUUIDInput, true) end })
-PetTab:Button({ Title = "Unfavorite Pet (UUID)", Callback = function() favoritePet(petUUIDInput, false) end })
-PetTab:Button({ Title = "Sell ALL Unfavorited Pets", Callback = function() sellAllUnfavorited() end })
-
-PetTab:Input({ Title = "Sell if Weight above", Placeholder = "e.g. 3.0",
-	Callback = function(v) local n = tonumber(v) if n then settings.sellWeight = n end end })
-PetTab:Input({ Title = "Sell if Age above (0=off)", Placeholder = "e.g. 10",
-	Callback = function(v) local n = tonumber(v) if n then settings.sellAge = n end end })
-PetTab:Toggle({ Title = "Sell Favorited Pets Too", Default = false,
-	Callback = function(v) settings.sellOverrideFav = v end })
-PetTab:Button({ Title = "Run Auto Sell Now", Callback = function() task.spawn(autoSellByFilter) end })
-
-local boostUUID = ""
-local boostItem = ""
-PetTab:Input({ Title = "Pet UUID for Boost", Placeholder = "Paste UUID",
-	Callback = function(v) boostUUID = v end })
-PetTab:Input({ Title = "Boost Item Name", Placeholder = "e.g. Medium Pet Toy",
-	Callback = function(v) boostItem = v end })
-PetTab:Button({ Title = "Apply Boost", Callback = function() boostPet(boostUUID, boostItem) end })
-
--- ============================================================
--- TAB 4: HATCH
--- ============================================================
-local HatchTab = Window:Tab({ Title = "Hatch" })
-
-local hatchLabel = HatchTab:Label({ Text = "Hatched: 0 | Select eggs below" })
-
-HatchTab:Dropdown({ Title = "Select Eggs to Hatch", Values = EGG_LIST, Multi = true,
-	Callback = function(val)
-		selectedEggs = val
-		hatchLabel:SetText("Hatched: " .. stats.hatched .. " | Selected: " .. #val .. " eggs")
-	end })
-
-HatchTab:Button({ Title = "Hatch Once", Callback = function()
-	if #selectedEggs == 0 then notify("Hatch","Select eggs first!") return end
-	task.spawn(function()
-		for _, egg in ipairs(selectedEggs) do hatchEgg(egg) task.wait(0.5) end
-	end)
-end })
-
-HatchTab:Toggle({ Title = "Auto Hatch Loop", Default = false,
-	Callback = function(val)
-		isAutoHatching = val
-		if val then task.spawn(autoHatchLoop) end
-		notify("AutoHatch", val and "ON" or "OFF")
-	end })
-
--- ============================================================
--- TAB 5: FARM
--- ============================================================
-local FarmTab = Window:Tab({ Title = "Farm" })
-
-FarmTab:Button({ Title = "Collect All Crops Now", Callback = function() task.spawn(collectCrops) end })
-FarmTab:Toggle({ Title = "Auto Collect Crops", Default = false,
-	Callback = function(val)
-		isAutoCollect = val
-		if val then task.spawn(function()
-			while isAutoCollect do collectCrops() task.wait(settings.collectInterval) end
-		end) end
-		notify("AutoCollect", val and "ON" or "OFF")
-	end })
-FarmTab:Input({ Title = "Collect Interval (seconds)", Placeholder = "Default: 10",
-	Callback = function(v) local n = tonumber(v) if n then settings.collectInterval = n end end })
-
-FarmTab:Button({ Title = "Water All Plants Now", Callback = function() task.spawn(waterPlants) end })
-FarmTab:Toggle({ Title = "Auto Water Plants", Default = false,
-	Callback = function(val)
-		isAutoWatering = val
-		if val then task.spawn(autoWaterLoop) end
-		notify("AutoWater", val and "ON" or "OFF")
-	end })
-FarmTab:Input({ Title = "Water Amount", Placeholder = "Default: 2",
-	Callback = function(v) local n = tonumber(v) if n then settings.waterAmount = n end end })
-FarmTab:Input({ Title = "Water Interval (seconds)", Placeholder = "Default: 30",
-	Callback = function(v) local n = tonumber(v) if n then settings.waterInterval = n end end })
-
-FarmTab:Dropdown({ Title = "Select Seeds to Plant", Values = SEED_LIST, Multi = true,
-	Callback = function(val) selectedSeeds = val end })
-FarmTab:Button({ Title = "Plant Seeds Now", Callback = function() task.spawn(plantSeeds) end })
-FarmTab:Toggle({ Title = "Auto Plant Seeds", Default = false,
-	Callback = function(val)
-		isAutoPlanting = val
-		if val then task.spawn(autoPlantLoop) end
-		notify("AutoPlant", val and "ON" or "OFF")
-	end })
-
--- ============================================================
--- TAB 6: SPRINKLER
--- ============================================================
-local SprinklerTab = Window:Tab({ Title = "Sprinkler" })
-
-SprinklerTab:Button({ Title = "Place Sprinkler", Callback = function() task.spawn(placeSprinkler) end })
-SprinklerTab:Button({ Title = "Remove All Sprinklers", Callback = function() task.spawn(removeAllSprinklers) end })
-SprinklerTab:Toggle({ Title = "Auto Place Sprinkler (every 60s)", Default = false,
-	Callback = function(val)
-		isAutoSprinkler = val
-		if val then task.spawn(autoSprinklerLoop) end
-		notify("Sprinkler", val and "ON" or "OFF")
-	end })
-
--- ============================================================
--- TAB 7: COOKING
--- ============================================================
-local CookTab = Window:Tab({ Title = "Cooking" })
-
-CookTab:Input({ Title = "Ingredient 1", Placeholder = "Item name", Callback = function(v) cookingItems[1] = v end })
-CookTab:Input({ Title = "Ingredient 2", Placeholder = "Item name", Callback = function(v) cookingItems[2] = v end })
-CookTab:Input({ Title = "Ingredient 3", Placeholder = "Item name", Callback = function(v) cookingItems[3] = v end })
-CookTab:Input({ Title = "Ingredient 4", Placeholder = "Item name", Callback = function(v) cookingItems[4] = v end })
-CookTab:Input({ Title = "Ingredient 5", Placeholder = "Item name", Callback = function(v) cookingItems[5] = v end })
-CookTab:Button({ Title = "Start Cooking Now", Callback = function() task.spawn(startCooking) end })
-CookTab:Button({ Title = "Collect Cooked Items", Callback = function() task.spawn(collectCooking) end })
-CookTab:Toggle({ Title = "Auto Cook Loop", Default = false,
-	Callback = function(val)
-		isAutoCooking = val
-		if val then task.spawn(autoCookLoop) end
-		notify("AutoCook", val and "ON" or "OFF")
-	end })
-
--- ============================================================
--- TAB 8: MUTATION
--- ============================================================
-local MutTab = Window:Tab({ Title = "Mutation" })
-
-local mutUUID = ""
-MutTab:Input({ Title = "Pet UUID", Placeholder = "Paste UUID here",
-	Callback = function(v) mutUUID = v end })
-MutTab:Button({ Title = "Submit Pet to Machine", Callback = function() submitMutation(mutUUID) end })
-MutTab:Button({ Title = "Collect from Machine", Callback = function() collectMutation() end })
-
--- ============================================================
--- TAB 9: SHOPS
--- ============================================================
-local ShopTab = Window:Tab({ Title = "Shops" })
-
-local shopItem = ""
-local shopAmt  = 1
-ShopTab:Input({ Title = "Item Name", Placeholder = "e.g. Watering Can",
-	Callback = function(v) shopItem = v end })
-ShopTab:Input({ Title = "Amount", Placeholder = "e.g. 1",
-	Callback = function(v) local n = tonumber(v) if n then shopAmt = n end end })
-ShopTab:Button({ Title = "Buy from Seed Shop",       Callback = function() if shopItem ~= "" then buyFromSeedShop(shopItem, shopAmt) end end })
-ShopTab:Button({ Title = "Buy from Gear Shop",       Callback = function() if shopItem ~= "" then buyFromGearShop(shopItem, shopAmt) end end })
-ShopTab:Button({ Title = "Buy Pet Egg",              Callback = function() if shopItem ~= "" then buyEgg(shopItem, shopAmt) end end })
-ShopTab:Button({ Title = "Buy from Event Shop",      Callback = function() if shopItem ~= "" then buyFromEventShop(shopItem, shopAmt) end end })
-ShopTab:Button({ Title = "Buy from Traveling Merchant", Callback = function() if shopItem ~= "" then buyFromTravelingMerchant(shopItem, shopAmt) end end })
-
--- ============================================================
--- TAB 10: ADVANCED FEATURES
--- ============================================================
-local AdvTab = Window:Tab({ Title = "Advanced" })
-
--- Auto Rejoin
-AdvTab:Label({ Text = "Auto Rejoin" })
-AdvTab:Toggle({ Title = "Auto Rejoin on Disconnect", Default = false,
-	Callback = function(v) isAutoRejoinDC = v notify("Rejoin", v and "ON" or "OFF") end })
-AdvTab:Input({ Title = "Rejoin After Hatch Count", Placeholder = "Default: 30",
-	Callback = function(v) local n = tonumber(v) if n then hatchRejoinLimit = n end end })
-AdvTab:Button({ Title = "Rejoin Now", Callback = function() task.spawn(rejoinGame) end })
-
-AdvTab:Divider()
-
--- Weather
-AdvTab:Label({ Text = "Visuals" })
-AdvTab:Button({ Title = "Remove Weather Visuals", Callback = function() removeWeather() end })
-AdvTab:Button({ Title = "Enable High Performance Mode", Callback = function() enableHighPerformance() end })
-
-AdvTab:Divider()
-
--- Ascension
-AdvTab:Label({ Text = "Ascension" })
-AdvTab:Input({ Title = "Max Seeds for Ascension", Placeholder = "Default: 1",
-	Callback = function(v) local n = tonumber(v) if n then ascensionSettings.maxSeeds = n end end })
-AdvTab:Button({ Title = "Ascend Now", Callback = function() task.spawn(doAscension) end })
-AdvTab:Toggle({ Title = "Auto Ascension", Default = false,
-	Callback = function(v)
-		ascensionSettings.autoAscend = v
-		if v then task.spawn(autoAscensionLoop) end
-		notify("Ascension", v and "ON" or "OFF")
-	end })
-
-AdvTab:Divider()
-
--- Shovel
-AdvTab:Label({ Text = "Shovel System" })
-AdvTab:Button({ Title = "Shovel Plants Now", Callback = function() task.spawn(shovelPlants) end })
-AdvTab:Toggle({ Title = "Auto Shovel Plants", Default = false,
-	Callback = function(v)
-		shovelSettings.isRunning = v
-		if v then task.spawn(autoShovelLoop) end
-		notify("Shovel", v and "ON" or "OFF")
-	end })
-AdvTab:Input({ Title = "Shovel Keep Amount", Placeholder = "0 = remove all",
-	Callback = function(v) local n = tonumber(v) if n then shovelSettings.keepAmount = n end end })
-
-AdvTab:Divider()
-
--- Reclaimer
-AdvTab:Label({ Text = "Reclaimer" })
-AdvTab:Button({ Title = "Run Reclaimer Now", Callback = function() task.spawn(runReclaimer) end })
-AdvTab:Input({ Title = "Reclaimer Keep Amount", Placeholder = "e.g. 0",
-	Callback = function(v) local n = tonumber(v) if n then reclaimerSettings.keepAmount = n end end })
-
-AdvTab:Divider()
-
--- CFrame Save/Load
-AdvTab:Label({ Text = "Position Save/Load" })
-local cframeNameInput = ""
-AdvTab:Input({ Title = "Position Name", Placeholder = "e.g. MyFarm",
-	Callback = function(v) cframeNameInput = v end })
-AdvTab:Button({ Title = "Save Current Position", Callback = function()
-	if cframeNameInput ~= "" then saveCFrame(cframeNameInput) end
-end })
-AdvTab:Button({ Title = "Teleport to Saved Position", Callback = function()
-	if cframeNameInput ~= "" then loadCFrame(cframeNameInput) end
-end })
-
--- ============================================================
--- TAB 11: PET SYSTEMS
--- ============================================================
-local PetSysTab = Window:Tab({ Title = "Pet Systems" })
-
--- Auto Fav After Hatch
-PetSysTab:Label({ Text = "Hatch Settings" })
-PetSysTab:Toggle({ Title = "Auto Favorite After Hatch", Default = false,
-	Callback = function(v)
-		autoFavAfterHatch = v
-		notify("AutoFav", v and "ON" or "OFF")
-	end })
-
-PetSysTab:Toggle({ Title = "Sell Mode - Sell Hatched Pets", Default = false,
-	Callback = function(v)
-		sellModeHatchSelected = v
-		notify("SellHatched", v and "ON" or "OFF")
-	end })
-PetSysTab:Button({ Title = "Sell Hatched Pets Now", Callback = function()
-	task.spawn(sellHatchedPets)
-end })
-
-PetSysTab:Divider()
-
--- Pet Level System
-PetSysTab:Label({ Text = "Pet Level Boost" })
-PetSysTab:Input({ Title = "Max Level Target", Placeholder = "e.g. 100",
-	Callback = function(v) local n = tonumber(v) if n then petLevelSettings.maxLevel = n end end })
-PetSysTab:Input({ Title = "Min Level to Start", Placeholder = "e.g. 0",
-	Callback = function(v) local n = tonumber(v) if n then petLevelSettings.minLevel = n end end })
-
-local levelUUIDInput = ""
-PetSysTab:Input({ Title = "Level Up Pet UUID", Placeholder = "Paste UUID",
-	Callback = function(v) levelUUIDInput = v end })
-PetSysTab:Button({ Title = "Level Up Pet Now", Callback = function()
-	if levelUUIDInput ~= "" then levelUpPet(levelUUIDInput, petLevelSettings.maxLevel) end
-end })
-PetSysTab:Toggle({ Title = "Auto Level All Pets", Default = false,
-	Callback = function(v)
-		petLevelSettings.autoLevel = v
-		if v then task.spawn(autoLevelLoop) end
-		notify("AutoLevel", v and "ON" or "OFF")
-	end })
-
-PetSysTab:Divider()
-
--- Pet Feeding
-PetSysTab:Label({ Text = "Pet Feeding" })
-PetSysTab:Toggle({ Title = "Use Food Instead of Fruits", Default = false,
-	Callback = function(v) feedSettings.feedFood = v end })
-PetSysTab:Toggle({ Title = "Force Feed All Pets", Default = false,
-	Callback = function(v) feedSettings.forceAll = v end })
-PetSysTab:Input({ Title = "Feed Interval (seconds)", Placeholder = "Default: 120",
-	Callback = function(v) local n = tonumber(v) if n then feedSettings.feedInterval = n end end })
-PetSysTab:Button({ Title = "Feed Pets Now", Callback = function() task.spawn(feedPets) end })
-PetSysTab:Toggle({ Title = "Auto Feed Pets", Default = false,
-	Callback = function(v)
-		feedSettings.autoFeed = v
-		if v then task.spawn(autoFeedLoop) end
-		notify("AutoFeed", v and "ON" or "OFF")
-	end })
-
-PetSysTab:Divider()
-
--- Auto Sell Backpack
-PetSysTab:Label({ Text = "Auto Sell Backpack" })
-PetSysTab:Input({ Title = "Auto Sell Every (seconds)", Placeholder = "Default: 60",
-	Callback = function(v) local n = tonumber(v) if n then autoSellBackpackSettings.intervalSec = n end end })
-PetSysTab:Toggle({ Title = "Auto Sell Backpack (time-based)", Default = false,
-	Callback = function(v)
-		autoSellBackpackSettings.enabled = v
-		if v then task.spawn(autoSellBackpackLoop) end
-		notify("AutoSellBackpack", v and "ON" or "OFF")
-	end })
-
--- ============================================================
--- GIFT & TRADE SYSTEM STATE
--- ============================================================
-local giftSettings = {
-	allowFav         = false,
-	tradeAutoAccept  = false,
-	customMode       = false,
-	delayBetweenGift = 9.9,
-	minAge           = 1,
-	maxAge           = 2,
-	minWeight        = 0.80,
-	maxWeight        = 2.86,
-	allowPetList     = {},
-	customPetUUIDs   = {},
-	playerTargets    = {},
-}
-local isGiftRunning  = false
-local isTradeWatcher = false
-
-local PetGiftingModule = nil
-pcall(function()
-	PetGiftingModule = require(ReplicatedStorage.Modules.PetServices.PetGiftingService)
+end)
+BoothsTab:Toggle("Auto Scan Every 5s", false, function(val)
+	isAutoScanning=val
+	if val then task.spawn(autoScanLoop) end
+	notify("AutoScan", val and "ON" or "OFF")
 end)
 
-local function getActivePlayers()
-	local list = {}
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= player then table.insert(list, p.Name) end
-	end
-	return list
-end
+-- TAB 3: PET TOOLS
+local PetTab = Tab("Pet Tools", "🐾")
+local petUUIDInput = ""
+PetTab:Section("Sell & Favorite")
+PetTab:Input("Pet UUID", "Paste UUID here", function(v) petUUIDInput=v end)
+PetTab:Button("Sell Pet (UUID)", function() sellPetByUUID(petUUIDInput) end)
+PetTab:Button("Favorite Pet (UUID)", function() favoritePet(petUUIDInput, true) end)
+PetTab:Button("Unfavorite Pet (UUID)", function() favoritePet(petUUIDInput, false) end)
+PetTab:Button("Sell ALL Unfavorited Pets", function() sellAllUnfavorited() end)
+PetTab:Section("Auto Sell Filter")
+PetTab:Input("Sell if Weight above", "e.g. 3.0", function(v) local n=tonumber(v) if n then settings.sellWeight=n end end)
+PetTab:Input("Sell if Age above (0=off)", "e.g. 10", function(v) local n=tonumber(v) if n then settings.sellAge=n end end)
+PetTab:Toggle("Sell Favorited Pets Too", false, function(v) settings.sellOverrideFav=v end)
+PetTab:Button("Run Auto Sell Now", function() task.spawn(autoSellByFilter) end)
+PetTab:Section("Boost")
+local boostUUID, boostItem = "", ""
+PetTab:Input("Pet UUID for Boost", "Paste UUID", function(v) boostUUID=v end)
+PetTab:Input("Boost Item Name", "e.g. Medium Pet Toy", function(v) boostItem=v end)
+PetTab:Button("Apply Boost", function() boostPet(boostUUID, boostItem) end)
 
-local function sendGift(targetPlayer)
-	if PetGiftingModule then
-		pcall(function() PetGiftingModule:GivePet(targetPlayer) end)
-	else
-		pcall(function()
-			local r = GameEvents:FindFirstChild("GiftPet") or GameEvents:FindFirstChild("PetGiftService")
-			if r then r:FireServer(targetPlayer) end
-		end)
-	end
-	notify("Gift", "Sent gift to " .. tostring(targetPlayer))
-end
-
-local function getPetsForGifting()
-	local ok, data = pcall(function() return DataStream:InvokeServer("GetInventory") end)
-	if not ok or not data then return {} end
-	local pets = (data.PetInventory and data.PetInventory.Data) or {}
-	local result = {}
-	for uuid, petData in pairs(pets) do
-		if petData then
-			local weight  = petData.Weight or petData.Size or 0
-			local age     = petData.Age or 0
-			local fav     = petData.Favorited or false
-			local petName = petData.Name or petData.PetName or ""
-			if fav and not giftSettings.allowFav then continue end
-			if giftSettings.customMode then
-				for _, cUUID in ipairs(giftSettings.customPetUUIDs) do
-					if uuid == cUUID then table.insert(result, {uuid=uuid,data=petData}) break end
-				end
-				continue
-			end
-			if age < giftSettings.minAge or age > giftSettings.maxAge then continue end
-			if weight < giftSettings.minWeight or weight > giftSettings.maxWeight then continue end
-			if #giftSettings.allowPetList > 0 then
-				local allowed = false
-				for _, n in ipairs(giftSettings.allowPetList) do if petName == n then allowed = true break end end
-				if not allowed then continue end
-			end
-			table.insert(result, {uuid=uuid, data=petData})
-		end
-	end
-	return result
-end
-
-local function autoGiftLoop()
-	while isGiftRunning do
-		if #giftSettings.playerTargets == 0 then task.wait(5) continue end
-		local pets = getPetsForGifting()
-		if #pets == 0 then task.wait(5) continue end
-		for _, petInfo in ipairs(pets) do
-			if not isGiftRunning then break end
-			for _, targetName in ipairs(giftSettings.playerTargets) do
-				local tp = Players:FindFirstChild(targetName)
-				if tp then sendGift(tp) task.wait(giftSettings.delayBetweenGift) end
-			end
-		end
-		task.wait(2)
-	end
-end
-
-local function isTradeActive()
-	local gui = player:FindFirstChild("PlayerGui")
-	if not gui then return false end
-	local ui = gui:FindFirstChild("TradingUI")
-	return ui and ui.Enabled == true
-end
-
-local function isOtherPlayerReady()
-	local ok, result = pcall(function()
-		local ui = player.PlayerGui:FindFirstChild("TradingUI")
-		if not ui then return false end
-		local ready = ui.LiveTrade.OtherPlr.Ready.BackgroundTransparency
-		return ready and ready < 1
-	end)
-	return ok and result or false
-end
-
-local function clickTradeAccept()
-	pcall(function()
-		local tradingUI = player.PlayerGui:FindFirstChild("TradingUI")
-		if not tradingUI or not tradingUI.Enabled then return end
-		local acceptBtn = tradingUI.LiveTrade.Options:FindFirstChild("Accept")
-		if acceptBtn then
-			for _, conn in ipairs(acceptBtn:GetConnections and acceptBtn:GetConnections() or {}) do
-				pcall(function() conn:Fire() end)
-			end
-		end
-	end)
-	notify("Trade", "Clicked Accept")
-end
-
-local function addPetToTrade(uuid)
-	pcall(function()
-		ReplicatedStorage.GameEvents.TradeEvents.AddItem:FireServer("Pet", uuid)
-	end)
-	notify("Trade", "Added pet to trade")
-end
-
-local function autoTradeWatcher()
-	while isTradeWatcher do
-		if isTradeActive() and giftSettings.tradeAutoAccept then
-			task.wait(0.5)
-			clickTradeAccept()
-			notify("Trade", "Auto-accepted trade!")
-		end
-		task.wait(0.3)
-	end
-end
-
--- ============================================================
--- TAB 10: GIFT & TRADE
--- ============================================================
-local GiftTab = Window:Tab({ Title = "Gift & Trade" })
-
-local playerTargetLabel = GiftTab:Label({ Text = "Targets: None" })
-
-GiftTab:Toggle({ Title = "Allow Gifting Favorited Pets", Default = false,
-	Callback = function(v) giftSettings.allowFav = v end })
-GiftTab:Input({ Title = "Min Age to Gift", Placeholder = "Default: 1",
-	Callback = function(v) local n = tonumber(v) if n then giftSettings.minAge = n end end })
-GiftTab:Input({ Title = "Max Age to Gift", Placeholder = "Default: 2",
-	Callback = function(v) local n = tonumber(v) if n then giftSettings.maxAge = n end end })
-GiftTab:Input({ Title = "Min Weight to Gift", Placeholder = "Default: 0.80",
-	Callback = function(v) local n = tonumber(v) if n then giftSettings.minWeight = n end end })
-GiftTab:Input({ Title = "Max Weight to Gift", Placeholder = "Default: 2.86",
-	Callback = function(v) local n = tonumber(v) if n then giftSettings.maxWeight = n end end })
-GiftTab:Input({ Title = "Delay Between Gifts (seconds)", Placeholder = "Default: 9.9",
-	Callback = function(v) local n = tonumber(v) if n then giftSettings.delayBetweenGift = n end end })
-
-GiftTab:Dropdown({ Title = "Allowed Pet Names to Gift", Values = PET_LIST, Multi = true,
-	Callback = function(val) giftSettings.allowPetList = val end })
-
-GiftTab:Toggle({ Title = "Custom UUID Mode", Default = false,
-	Callback = function(v) giftSettings.customMode = v end })
-
-local customUUIDInput = ""
-GiftTab:Input({ Title = "Add Custom Pet UUID", Placeholder = "Paste UUID",
-	Callback = function(v) customUUIDInput = v end })
-GiftTab:Button({ Title = "Add UUID to Custom List", Callback = function()
-	if customUUIDInput ~= "" then
-		table.insert(giftSettings.customPetUUIDs, customUUIDInput)
-		notify("Gift", "Added UUID: " .. customUUIDInput)
-		customUUIDInput = ""
-	end
-end })
-GiftTab:Button({ Title = "Clear Custom UUID List", Callback = function()
-	giftSettings.customPetUUIDs = {}
-	notify("Gift", "Cleared")
-end })
-
-GiftTab:Button({ Title = "Refresh Player List", Callback = function()
-	local pl = getActivePlayers()
-	playerTargetLabel:SetText("In server: " .. table.concat(pl, ", "))
-end })
-
-local targetPlayerInput = ""
-GiftTab:Input({ Title = "Add Target Player Name", Placeholder = "Player name",
-	Callback = function(v) targetPlayerInput = v end })
-GiftTab:Button({ Title = "Add Player to Targets", Callback = function()
-	if targetPlayerInput ~= "" then
-		table.insert(giftSettings.playerTargets, targetPlayerInput)
-		playerTargetLabel:SetText("Targets: " .. table.concat(giftSettings.playerTargets, ", "))
-		notify("Gift", "Added: " .. targetPlayerInput)
-		targetPlayerInput = ""
-	end
-end })
-GiftTab:Button({ Title = "Clear Target Players", Callback = function()
-	giftSettings.playerTargets = {}
-	playerTargetLabel:SetText("Targets: None")
-end })
-
-GiftTab:Button({ Title = "Send Gift Once (all targets)", Callback = function()
-	if #giftSettings.playerTargets == 0 then notify("Gift","Add targets first!") return end
+-- TAB 4: HATCH
+local HatchTab = Tab("Hatch", "🥚")
+local hatchLabel = HatchTab:Label("Hatched: 0 | Select eggs below")
+HatchTab:Section("Egg Selection")
+HatchTab:Dropdown("Select Eggs to Hatch", EGG_LIST, true, function(val)
+	selectedEggs=val
+	hatchLabel:Set("Hatched: "..stats.hatched.." | Selected: "..#val.." eggs")
+end)
+HatchTab:Section("Controls")
+HatchTab:Button("Hatch Once", function()
+	if #selectedEggs==0 then notify("Hatch","Select eggs first!") return end
 	task.spawn(function()
-		for _, name in ipairs(giftSettings.playerTargets) do
-			local tp = Players:FindFirstChild(name)
+		for _,egg in ipairs(selectedEggs) do hatchEgg(egg) task.wait(0.5) end
+	end)
+end)
+HatchTab:Toggle("Auto Hatch Loop", false, function(val)
+	isAutoHatching=val
+	if val then task.spawn(autoHatchLoop) end
+	notify("AutoHatch", val and "ON" or "OFF")
+end)
+HatchTab:Toggle("Auto Favorite After Hatch", false, function(v)
+	autoFavAfterHatch=v
+	notify("AutoFav", v and "ON" or "OFF")
+end)
+HatchTab:Toggle("Sell Mode - Sell Hatched Pets", false, function(v)
+	sellModeHatchSelected=v
+	notify("SellHatched", v and "ON" or "OFF")
+end)
+HatchTab:Button("Sell Hatched Pets Now", function() task.spawn(sellHatchedPets) end)
+
+-- TAB 5: FARM
+local FarmTab = Tab("Farm", "🌱")
+FarmTab:Section("Crop Collection")
+FarmTab:Button("Collect All Crops Now", function() task.spawn(collectCrops) end)
+FarmTab:Toggle("Auto Collect Crops", false, function(val)
+	isAutoCollect=val
+	if val then task.spawn(function()
+		while isAutoCollect do collectCrops() task.wait(settings.collectInterval) end
+	end) end
+	notify("AutoCollect", val and "ON" or "OFF")
+end)
+FarmTab:Input("Collect Interval (seconds)", "Default: 10", function(v) local n=tonumber(v) if n then settings.collectInterval=n end end)
+FarmTab:Section("Watering")
+FarmTab:Button("Water All Plants Now", function() task.spawn(waterPlants) end)
+FarmTab:Toggle("Auto Water Plants", false, function(val)
+	isAutoWatering=val
+	if val then task.spawn(autoWaterLoop) end
+	notify("AutoWater", val and "ON" or "OFF")
+end)
+FarmTab:Input("Water Amount", "Default: 2", function(v) local n=tonumber(v) if n then settings.waterAmount=n end end)
+FarmTab:Input("Water Interval (seconds)", "Default: 30", function(v) local n=tonumber(v) if n then settings.waterInterval=n end end)
+FarmTab:Section("Seed Planting")
+FarmTab:Dropdown("Select Seeds to Plant", SEED_LIST, true, function(val) selectedSeeds=val end)
+FarmTab:Button("Plant Seeds Now", function() task.spawn(plantSeeds) end)
+FarmTab:Toggle("Auto Plant Seeds", false, function(val)
+	isAutoPlanting=val
+	if val then task.spawn(autoPlantLoop) end
+	notify("AutoPlant", val and "ON" or "OFF")
+end)
+
+-- TAB 6: SPRINKLER
+local SprinklerTab = Tab("Sprinkler", "💧")
+SprinklerTab:Section("Sprinkler Control")
+SprinklerTab:Button("Place Sprinkler", function() task.spawn(placeSprinkler) end)
+SprinklerTab:Button("Remove All Sprinklers", function() task.spawn(removeAllSprinklers) end)
+SprinklerTab:Toggle("Auto Place Sprinkler (every 60s)", false, function(val)
+	isAutoSprinkler=val
+	if val then task.spawn(autoSprinklerLoop) end
+	notify("Sprinkler", val and "ON" or "OFF")
+end)
+
+-- TAB 7: COOKING
+local CookTab = Tab("Cooking", "🍳")
+CookTab:Section("Ingredients (up to 5)")
+CookTab:Input("Ingredient 1", "Item name", function(v) cookingItems[1]=v end)
+CookTab:Input("Ingredient 2", "Item name", function(v) cookingItems[2]=v end)
+CookTab:Input("Ingredient 3", "Item name", function(v) cookingItems[3]=v end)
+CookTab:Input("Ingredient 4", "Item name", function(v) cookingItems[4]=v end)
+CookTab:Input("Ingredient 5", "Item name", function(v) cookingItems[5]=v end)
+CookTab:Section("Controls")
+CookTab:Button("Start Cooking Now", function() task.spawn(startCooking) end)
+CookTab:Button("Collect Cooked Items", function() task.spawn(collectCooking) end)
+CookTab:Toggle("Auto Cook Loop", false, function(val)
+	isAutoCooking=val
+	if val then task.spawn(autoCookLoop) end
+	notify("AutoCook", val and "ON" or "OFF")
+end)
+
+-- TAB 8: MUTATION
+local MutTab = Tab("Mutation", "🧬")
+local mutUUID = ""
+MutTab:Section("Mutation Machine")
+MutTab:Input("Pet UUID", "Paste UUID here", function(v) mutUUID=v end)
+MutTab:Button("Submit Pet to Machine", function() submitMutation(mutUUID) end)
+MutTab:Button("Collect from Machine", function() collectMutation() end)
+
+-- TAB 9: SHOPS
+local ShopTab = Tab("Shops", "🛒")
+local shopItem, shopAmt = "", 1
+ShopTab:Section("Buy Items")
+ShopTab:Input("Item Name", "e.g. Watering Can", function(v) shopItem=v end)
+ShopTab:Input("Amount", "e.g. 1", function(v) local n=tonumber(v) if n then shopAmt=n end end)
+ShopTab:Button("Buy from Seed Shop",          function() if shopItem~="" then buyFromSeedShop(shopItem,shopAmt) end end)
+ShopTab:Button("Buy from Gear Shop",          function() if shopItem~="" then buyFromGearShop(shopItem,shopAmt) end end)
+ShopTab:Button("Buy Pet Egg",                 function() if shopItem~="" then buyEgg(shopItem,shopAmt) end end)
+ShopTab:Button("Buy from Event Shop",         function() if shopItem~="" then buyFromEventShop(shopItem,shopAmt) end end)
+ShopTab:Button("Buy from Traveling Merchant", function() if shopItem~="" then buyFromTravelingMerchant(shopItem,shopAmt) end end)
+
+-- TAB 10: ADVANCED
+local AdvTab = Tab("Advanced", "⚡")
+AdvTab:Section("Auto Rejoin")
+AdvTab:Toggle("Auto Rejoin on Disconnect", false, function(v) isAutoRejoinDC=v notify("Rejoin", v and "ON" or "OFF") end)
+AdvTab:Input("Rejoin After Hatch Count", "Default: 30", function(v) local n=tonumber(v) if n then hatchRejoinLimit=n end end)
+AdvTab:Button("Rejoin Now", function() task.spawn(rejoinGame) end)
+AdvTab:Section("Visuals & Performance")
+AdvTab:Button("Remove Weather Visuals", function() removeWeather() end)
+AdvTab:Button("Enable High Performance Mode", function() enableHighPerformance() end)
+AdvTab:Section("Ascension")
+AdvTab:Input("Max Seeds for Ascension", "Default: 1", function(v) local n=tonumber(v) if n then ascensionSettings.maxSeeds=n end end)
+AdvTab:Button("Ascend Now", function() task.spawn(doAscension) end)
+AdvTab:Toggle("Auto Ascension", false, function(v)
+	ascensionSettings.autoAscend=v
+	if v then task.spawn(autoAscensionLoop) end
+	notify("Ascension", v and "ON" or "OFF")
+end)
+AdvTab:Section("Shovel")
+AdvTab:Button("Shovel Plants Now", function() task.spawn(shovelPlants) end)
+AdvTab:Toggle("Auto Shovel Plants", false, function(v)
+	shovelSettings.isRunning=v
+	if v then task.spawn(autoShovelLoop) end
+	notify("Shovel", v and "ON" or "OFF")
+end)
+AdvTab:Input("Shovel Keep Amount", "0 = remove all", function(v) local n=tonumber(v) if n then shovelSettings.keepAmount=n end end)
+AdvTab:Section("Reclaimer")
+AdvTab:Button("Run Reclaimer Now", function() task.spawn(runReclaimer) end)
+AdvTab:Input("Reclaimer Keep Amount", "e.g. 0", function(v) local n=tonumber(v) if n then reclaimerSettings.keepAmount=n end end)
+AdvTab:Section("Position Save/Load")
+local cframeNameInput = ""
+AdvTab:Input("Position Name", "e.g. MyFarm", function(v) cframeNameInput=v end)
+AdvTab:Button("Save Current Position", function() if cframeNameInput~="" then saveCFrame(cframeNameInput) end end)
+AdvTab:Button("Teleport to Saved Position", function() if cframeNameInput~="" then loadCFrame(cframeNameInput) end end)
+
+-- TAB 11: PET SYSTEMS
+local PetSysTab = Tab("Pet Systems", "🐾")
+PetSysTab:Section("Pet Level Boost")
+PetSysTab:Input("Max Level Target", "e.g. 100", function(v) local n=tonumber(v) if n then petLevelSettings.maxLevel=n end end)
+PetSysTab:Input("Min Level to Start", "e.g. 0", function(v) local n=tonumber(v) if n then petLevelSettings.minLevel=n end end)
+local levelUUIDInput = ""
+PetSysTab:Input("Level Up Pet UUID", "Paste UUID", function(v) levelUUIDInput=v end)
+PetSysTab:Button("Level Up Pet Now", function() if levelUUIDInput~="" then levelUpPet(levelUUIDInput, petLevelSettings.maxLevel) end end)
+PetSysTab:Toggle("Auto Level All Pets", false, function(v)
+	petLevelSettings.autoLevel=v
+	if v then task.spawn(autoLevelLoop) end
+	notify("AutoLevel", v and "ON" or "OFF")
+end)
+PetSysTab:Section("Pet Feeding")
+PetSysTab:Toggle("Use Food Instead of Fruits", false, function(v) feedSettings.feedFood=v end)
+PetSysTab:Toggle("Force Feed All Pets", false, function(v) feedSettings.forceAll=v end)
+PetSysTab:Input("Feed Interval (seconds)", "Default: 120", function(v) local n=tonumber(v) if n then feedSettings.feedInterval=n end end)
+PetSysTab:Button("Feed Pets Now", function() task.spawn(feedPets) end)
+PetSysTab:Toggle("Auto Feed Pets", false, function(v)
+	feedSettings.autoFeed=v
+	if v then task.spawn(autoFeedLoop) end
+	notify("AutoFeed", v and "ON" or "OFF")
+end)
+PetSysTab:Section("Auto Sell Backpack")
+PetSysTab:Input("Auto Sell Every (seconds)", "Default: 60", function(v) local n=tonumber(v) if n then autoSellBackpackSettings.intervalSec=n end end)
+PetSysTab:Toggle("Auto Sell Backpack (time-based)", false, function(v)
+	autoSellBackpackSettings.enabled=v
+	if v then task.spawn(autoSellBackpackLoop) end
+	notify("AutoSellBackpack", v and "ON" or "OFF")
+end)
+
+-- TAB 12: GIFT & TRADE
+local GiftTab = Tab("Gift & Trade", "🎁")
+local playerTargetLabel = GiftTab:Label("Targets: None")
+GiftTab:Section("Gift Settings")
+GiftTab:Toggle("Allow Gifting Favorited Pets", false, function(v) giftSettings.allowFav=v end)
+GiftTab:Input("Min Age to Gift", "Default: 1", function(v) local n=tonumber(v) if n then giftSettings.minAge=n end end)
+GiftTab:Input("Max Age to Gift", "Default: 2", function(v) local n=tonumber(v) if n then giftSettings.maxAge=n end end)
+GiftTab:Input("Min Weight to Gift", "Default: 0.80", function(v) local n=tonumber(v) if n then giftSettings.minWeight=n end end)
+GiftTab:Input("Max Weight to Gift", "Default: 2.86", function(v) local n=tonumber(v) if n then giftSettings.maxWeight=n end end)
+GiftTab:Input("Delay Between Gifts (seconds)", "Default: 9.9", function(v) local n=tonumber(v) if n then giftSettings.delayBetweenGift=n end end)
+GiftTab:Section("Pet Filter")
+GiftTab:Dropdown("Allowed Pet Names to Gift", PET_LIST, true, function(val) giftSettings.allowPetList=val end)
+GiftTab:Toggle("Custom UUID Mode", false, function(v) giftSettings.customMode=v end)
+local customUUIDInput = ""
+GiftTab:Input("Add Custom Pet UUID", "Paste UUID", function(v) customUUIDInput=v end)
+GiftTab:Button("Add UUID to Custom List", function()
+	if customUUIDInput~="" then
+		table.insert(giftSettings.customPetUUIDs, customUUIDInput)
+		notify("Gift","Added UUID: "..customUUIDInput)
+		customUUIDInput=""
+	end
+end)
+GiftTab:Button("Clear Custom UUID List", function()
+	giftSettings.customPetUUIDs={}
+	notify("Gift","Cleared")
+end)
+GiftTab:Section("Target Players")
+GiftTab:Button("Refresh Player List", function()
+	local pl=getActivePlayers()
+	playerTargetLabel:Set("In server: "..table.concat(pl,", "))
+end)
+local targetPlayerInput = ""
+GiftTab:Input("Add Target Player Name", "Player name", function(v) targetPlayerInput=v end)
+GiftTab:Button("Add Player to Targets", function()
+	if targetPlayerInput~="" then
+		table.insert(giftSettings.playerTargets, targetPlayerInput)
+		playerTargetLabel:Set("Targets: "..table.concat(giftSettings.playerTargets,", "))
+		notify("Gift","Added: "..targetPlayerInput)
+		targetPlayerInput=""
+	end
+end)
+GiftTab:Button("Clear Target Players", function()
+	giftSettings.playerTargets={}
+	playerTargetLabel:Set("Targets: None")
+end)
+GiftTab:Section("Gift Controls")
+GiftTab:Button("Send Gift Once (all targets)", function()
+	if #giftSettings.playerTargets==0 then notify("Gift","Add targets first!") return end
+	task.spawn(function()
+		for _,name in ipairs(giftSettings.playerTargets) do
+			local tp=Players:FindFirstChild(name)
 			if tp then sendGift(tp) task.wait(giftSettings.delayBetweenGift)
 			else notify("Gift","Not found: "..name) end
 		end
 	end)
-end })
-
-GiftTab:Toggle({ Title = "Auto Gift Loop", Default = false,
-	Callback = function(val)
-		isGiftRunning = val
-		if val then
-			if #giftSettings.playerTargets == 0 then
-				notify("Gift","Add targets first!") isGiftRunning = false return
-			end
-			task.spawn(autoGiftLoop)
-		end
-		notify("AutoGift", val and "ON" or "OFF")
-	end })
-
-GiftTab:Toggle({ Title = "Auto Accept Incoming Trades", Default = false,
-	Callback = function(val)
-		giftSettings.tradeAutoAccept = val
-		isTradeWatcher = val
-		if val then task.spawn(autoTradeWatcher) end
-		notify("Trade", val and "ON" or "OFF")
-	end })
-
-GiftTab:Button({ Title = "Accept Current Trade Now", Callback = function()
+end)
+GiftTab:Toggle("Auto Gift Loop", false, function(val)
+	isGiftRunning=val
+	if val then
+		if #giftSettings.playerTargets==0 then notify("Gift","Add targets first!") isGiftRunning=false return end
+		task.spawn(autoGiftLoop)
+	end
+	notify("AutoGift", val and "ON" or "OFF")
+end)
+GiftTab:Section("Trade System")
+GiftTab:Toggle("Auto Accept Incoming Trades", false, function(val)
+	giftSettings.tradeAutoAccept=val
+	isTradeWatcher=val
+	if val then task.spawn(autoTradeWatcher) end
+	notify("Trade", val and "ON" or "OFF")
+end)
+GiftTab:Button("Accept Current Trade Now", function()
 	if isTradeActive() then clickTradeAccept()
 	else notify("Trade","No active trade") end
-end })
-
+end)
 local tradePetUUID = ""
-GiftTab:Input({ Title = "Add Pet to Trade (UUID)", Placeholder = "Paste UUID",
-	Callback = function(v) tradePetUUID = v end })
-GiftTab:Button({ Title = "Add Pet to Current Trade", Callback = function()
-	if tradePetUUID ~= "" then addPetToTrade(tradePetUUID)
+GiftTab:Input("Add Pet to Trade (UUID)", "Paste UUID", function(v) tradePetUUID=v end)
+GiftTab:Button("Add Pet to Current Trade", function()
+	if tradePetUUID~="" then addPetToTrade(tradePetUUID)
 	else notify("Trade","Enter UUID first") end
-end })
-GiftTab:Button({ Title = "Check Trade Status", Callback = function()
+end)
+GiftTab:Button("Check Trade Status", function()
 	notify("Trade","Active: "..tostring(isTradeActive()).." | Ready: "..tostring(isOtherPlayerReady()))
-end })
+end)
 
--- ============================================================
--- TAB 11: STATS
--- ============================================================
-local StatsTab = Window:Tab({ Title = "Stats" })
-local statsLabel = StatsTab:Label({ Text = "No stats yet" })
-StatsTab:Button({ Title = "Clear All Stats", Callback = function()
-	stats = { sniped=0, tokensSpent=0, totalScans=0, hatched=0, sold=0, collected=0, planted=0, history={} }
-	statsLabel:SetText("Stats cleared")
-end })
+-- TAB 13: STATS
+local StatsTab = Tab("Stats", "📊")
+local statsLabel = StatsTab:Label("No stats yet")
+StatsTab:Section("Live Statistics")
+StatsTab:Button("Clear All Stats", function()
+	stats={sniped=0,tokensSpent=0,totalScans=0,hatched=0,sold=0,collected=0,planted=0,history={}}
+	statsLabel:Set("Stats cleared")
+end)
 
--- ============================================================
--- TAB 12: SETTINGS
--- ============================================================
-local SettingsTab = Window:Tab({ Title = "Settings" })
-
-SettingsTab:Toggle({ Title = "Enable Notifications", Default = true,
-	Callback = function(v) settings.notifications = v end })
-SettingsTab:Button({ Title = "Reset All Settings", Callback = function()
-	settings = {
-		maxPrice=100000, minKG=0, maxKG=10000, snipeSpeed=1,
-		autoTeleport=false, autoRejoin=false, notifications=true,
-		sellWeight=3.0, sellAge=0, sellOverrideFav=false,
-		waterAmount=2, waterInterval=30, collectInterval=10,
-	}
+-- TAB 14: SETTINGS
+local SettingsTab = Tab("Settings", "⚙️")
+SettingsTab:Section("General")
+SettingsTab:Toggle("Enable Notifications", true, function(v) settings.notifications=v end)
+SettingsTab:Button("Reset All Settings", function()
+	settings={maxPrice=100000,minKG=0,maxKG=10000,snipeSpeed=1,
+		autoTeleport=false,autoRejoin=false,notifications=true,
+		sellWeight=3.0,sellAge=0,sellOverrideFav=false,
+		waterAmount=2,waterInterval=30,collectInterval=10}
 	notify("Settings","Reset to defaults")
-end })
-SettingsTab:Label({ Text = "F6 = Start/Stop Sniping" })
-SettingsTab:Label({ Text = "RightControl = Toggle UI" })
+end)
+SettingsTab:Section("Hotkeys")
+SettingsTab:Label("F6 = Start/Stop Sniping")
+SettingsTab:Label("RightControl = Toggle UI")
+SettingsTab:Label("LeftControl = Minimize")
+
+-- Switch to first tab
+switchTab("Snipe Pets")
 
 -- ============================================================
--- LIVE STATS UPDATE (every 0.5s)
+-- LIVE STATS UPDATE
 -- ============================================================
 local lastUpdate = 0
 RunService.Heartbeat:Connect(function()
@@ -1606,888 +1957,15 @@ RunService.Heartbeat:Connect(function()
 		.."\nHatched: "..stats.hatched.." | Sold: "..stats.sold
 		.."\nCollected: "..stats.collected.." | Planted: "..stats.planted
 		.."\nScans: "..stats.totalScans.." | Avg: "..avg.."t"
-		.."\nSnipe: "..(isAutoSniping and "ACTIVE" or "IDLE")
+		.."\nSnipe: "..(isAutoSniping and "🟢 ACTIVE" or "🔴 IDLE")
 		.."\n\nRecent Snipes:\n"
 	for i = math.max(1, #stats.history-7), #stats.history do
 		local e = stats.history[i]
-		if e then txt = txt..e.time.." | ("..e.price..") "..e.pet.." ("..e.kg.."kg)\n" end
+		if e then txt=txt..e.time.." | ("..e.price..") "..e.pet.." ("..e.kg.."kg)\n" end
 	end
-	statsLabel:SetText(txt)
-	snipeStatusLabel:SetText("Status: "..(isAutoSniping and "ACTIVE" or "IDLE").." | Selected: "..#selectedPets.." pets")
-	hatchLabel:SetText("Hatched: "..stats.hatched.." | Selected: "..#selectedEggs.." eggs")
-end)
-
--- ============================================================
--- HOTKEYS
--- ============================================================
-UserInputService.InputBegan:Connect(function(input, gp)
-	if gp then return end
-	if input.KeyCode == Enum.KeyCode.F6 then
-		if isAutoSniping then
-			isAutoSniping = false
-			notify("F6","Sniping stopped")
-		else
-			if #selectedPets == 0 then notify("F6","Select pets first!") return end
-			isAutoSniping = true
-			notify("F6","Sniping started")
-			task.spawn(snipeLoop)
-		end
-	end
-end)
-
-print("Rivet Hub 2 loaded | F6 = Start/Stop | RightControl = Toggle UI")
-	Name             = "Rivet Hub 2 - Grow a Garden",
-	LoadingTitle     = "Rivet Hub 2",
-	LoadingSubtitle  = "Loading all features...",
-	ConfigurationSaving = {
-		Enabled    = true,
-		FolderName = "RivetHub2",
-		FileName   = "Config"
-	},
-	KeySystem = false,
-})
-
--- ============================================================
--- TAB 1: SNIPE PETS
--- ============================================================
-local SnipeTab = Window:CreateTab("🎯 Snipe Pets", 4483362458)
-
-SnipeTab:CreateSection("Pet Selection")
-
-local snipeStatusLabel = SnipeTab:CreateLabel("Status: IDLE | Selected: 0 pets")
-
-SnipeTab:CreateDropdown({
-	Name            = "Select Pets to Snipe",
-	Options         = PET_LIST,
-	CurrentOption   = {},
-	MultipleOptions = true,
-	Flag            = "SnipePets",
-	Callback        = function(val)
-		selectedPets = val
-		snipeStatusLabel:Set("Status: " .. (isAutoSniping and "ACTIVE" or "IDLE") .. " | Selected: " .. #val .. " pets")
-	end,
-})
-
-SnipeTab:CreateButton({ Name = "Clear Pet Selection",
-	Callback = function()
-		selectedPets = {}
-		snipeStatusLabel:Set("Status: IDLE | Selected: 0 pets")
-	end,
-})
-
-SnipeTab:CreateSection("Controls")
-
-SnipeTab:CreateButton({ Name = "▶ START SNIPING",
-	Callback = function()
-		if #selectedPets == 0 then notify("Error","Select pets first!") return end
-		if isAutoSniping then return end
-		isAutoSniping = true
-		snipeStatusLabel:Set("Status: ACTIVE | Selected: " .. #selectedPets .. " pets")
-		notify("Snipe","Started! F6 to stop.")
-		task.spawn(snipeLoop)
-	end,
-})
-
-SnipeTab:CreateButton({ Name = "⏹ STOP SNIPING",
-	Callback = function()
-		isAutoSniping = false
-		snipeStatusLabel:Set("Status: IDLE | Selected: " .. #selectedPets .. " pets")
-		notify("Snipe","Stopped.")
-	end,
-})
-
-SnipeTab:CreateSection("Filters")
-
-SnipeTab:CreateInput({ Name = "Max Buy Price (tokens)", PlaceholderText = "e.g. 50000", RemoveTextAfterFocusLost = false, Flag = "MaxPrice",
-	Callback = function(v) local n = tonumber(v) if n then settings.maxPrice = n notify("Filter","Max price: "..n) end end })
-
-SnipeTab:CreateInput({ Name = "Min KG", PlaceholderText = "e.g. 0", RemoveTextAfterFocusLost = false, Flag = "MinKG",
-	Callback = function(v) local n = tonumber(v) if n then settings.minKG = n end end })
-
-SnipeTab:CreateInput({ Name = "Max KG", PlaceholderText = "e.g. 10000", RemoveTextAfterFocusLost = false, Flag = "MaxKG",
-	Callback = function(v) local n = tonumber(v) if n then settings.maxKG = n end end })
-
-SnipeTab:CreateInput({ Name = "Snipe Speed (1-20x)", PlaceholderText = "Default: 1", RemoveTextAfterFocusLost = false, Flag = "SnipeSpeed",
-	Callback = function(v) local n = tonumber(v) if n then settings.snipeSpeed = math.clamp(n,1,20) end end })
-
-SnipeTab:CreateToggle({ Name = "Auto Teleport to Pet", CurrentValue = false, Flag = "AutoTeleport",
-	Callback = function(v) settings.autoTeleport = v notify("Teleport", v and "ON" or "OFF") end })
-
-SnipeTab:CreateToggle({ Name = "Auto Rejoin After Snipe", CurrentValue = false, Flag = "AutoRejoin",
-	Callback = function(v) settings.autoRejoin = v notify("Rejoin", v and "ON" or "OFF") end })
-
--- ============================================================
--- TAB 2: BOOTHS
--- ============================================================
-local BoothsTab = Window:CreateTab("🔍 Booths", 4483362458)
-
-BoothsTab:CreateSection("Scan Filter")
-
-local scanFilterLabel = BoothsTab:CreateLabel("Filter: All 364 pets")
-
-BoothsTab:CreateDropdown({
-	Name            = "Select Pets to Scan For",
-	Options         = PET_LIST,
-	CurrentOption   = {},
-	MultipleOptions = true,
-	Flag            = "ScanFilter",
-	Callback        = function(val)
-		scanPets = val
-		scanFilterLabel:Set("Filter: " .. (#val == 0 and "All 364 pets" or #val .. " pets selected"))
-	end,
-})
-
-BoothsTab:CreateButton({ Name = "Clear Scan Filter",
-	Callback = function()
-		scanPets = {}
-		scanFilterLabel:Set("Filter: All 364 pets")
-	end,
-})
-
-BoothsTab:CreateSection("Scanner")
-
-local scanResultLabel = BoothsTab:CreateLabel("Press Scan to find pets")
-
-BoothsTab:CreateButton({ Name = "🔍 Scan Booths Now",
-	Callback = function()
-		task.spawn(function()
-			scanResultLabel:Set("Scanning...")
-			local found = scanBooths()
-			local txt = "Found " .. found .. " pets:\n"
-			for i = 1, math.min(15, #boothsData) do
-				local b = boothsData[i]
-				txt = txt .. "(" .. b.Price .. ") " .. b.Name .. " (" .. b.KG .. "kg)\n"
-			end
-			if #boothsData > 15 then txt = txt .. "... +" .. (#boothsData-15) .. " more" end
-			scanResultLabel:Set(txt)
-		end)
-	end,
-})
-
-BoothsTab:CreateToggle({ Name = "Auto Scan Every 5s", CurrentValue = false, Flag = "AutoScan",
-	Callback = function(val)
-		isAutoScanning = val
-		if val then task.spawn(autoScanLoop) end
-		notify("AutoScan", val and "ON" or "OFF")
-	end,
-})
-
--- ============================================================
--- TAB 3: PET TOOLS
--- ============================================================
-local PetTab = Window:CreateTab("🐾 Pet Tools", 4483362458)
-
-PetTab:CreateSection("Sell & Favorite")
-
-local petUUIDInput = ""
-PetTab:CreateInput({ Name = "Pet UUID", PlaceholderText = "Paste UUID here", RemoveTextAfterFocusLost = false, Flag = "PetUUID",
-	Callback = function(v) petUUIDInput = v end })
-
-PetTab:CreateButton({ Name = "Sell Pet (UUID)", Callback = function() sellPetByUUID(petUUIDInput) end })
-PetTab:CreateButton({ Name = "Favorite Pet (UUID)", Callback = function() favoritePet(petUUIDInput, true) end })
-PetTab:CreateButton({ Name = "Unfavorite Pet (UUID)", Callback = function() favoritePet(petUUIDInput, false) end })
-PetTab:CreateButton({ Name = "Sell ALL Unfavorited Pets", Callback = function() sellAllUnfavorited() end })
-
-PetTab:CreateSection("Auto Sell Filter")
-
-PetTab:CreateInput({ Name = "Sell if Weight above", PlaceholderText = "e.g. 3.0", RemoveTextAfterFocusLost = false, Flag = "SellWeight",
-	Callback = function(v) local n = tonumber(v) if n then settings.sellWeight = n end end })
-
-PetTab:CreateInput({ Name = "Sell if Age above (0=off)", PlaceholderText = "e.g. 10", RemoveTextAfterFocusLost = false, Flag = "SellAge",
-	Callback = function(v) local n = tonumber(v) if n then settings.sellAge = n end end })
-
-PetTab:CreateToggle({ Name = "Sell Favorited Pets Too", CurrentValue = false, Flag = "SellFav",
-	Callback = function(v) settings.sellOverrideFav = v end })
-
-PetTab:CreateButton({ Name = "Run Auto Sell Now", Callback = function() task.spawn(autoSellByFilter) end })
-
-PetTab:CreateSection("Boost")
-
-local boostUUID = ""
-local boostItem = ""
-PetTab:CreateInput({ Name = "Pet UUID for Boost", PlaceholderText = "Paste UUID", RemoveTextAfterFocusLost = false, Flag = "BoostUUID",
-	Callback = function(v) boostUUID = v end })
-PetTab:CreateInput({ Name = "Boost Item Name", PlaceholderText = "e.g. Medium Pet Toy", RemoveTextAfterFocusLost = false, Flag = "BoostItem",
-	Callback = function(v) boostItem = v end })
-PetTab:CreateButton({ Name = "Apply Boost", Callback = function() boostPet(boostUUID, boostItem) end })
-
--- ============================================================
--- TAB 4: HATCH
--- ============================================================
-local HatchTab = Window:CreateTab("🥚 Hatch", 4483362458)
-
-HatchTab:CreateSection("Egg Selection")
-
-local hatchLabel = HatchTab:CreateLabel("Hatched: 0 | Select eggs below")
-
-HatchTab:CreateDropdown({
-	Name            = "Select Eggs to Hatch",
-	Options         = EGG_LIST,
-	CurrentOption   = {},
-	MultipleOptions = true,
-	Flag            = "HatchEggs",
-	Callback        = function(val)
-		selectedEggs = val
-		hatchLabel:Set("Hatched: " .. stats.hatched .. " | Selected: " .. #val .. " eggs")
-	end,
-})
-
-HatchTab:CreateSection("Controls")
-
-HatchTab:CreateButton({ Name = "Hatch Once",
-	Callback = function()
-		if #selectedEggs == 0 then notify("Hatch","Select eggs first!") return end
-		task.spawn(function()
-			for _, egg in ipairs(selectedEggs) do
-				hatchEgg(egg)
-				task.wait(0.5)
-			end
-		end)
-	end,
-})
-
-HatchTab:CreateToggle({ Name = "Auto Hatch Loop", CurrentValue = false, Flag = "AutoHatch",
-	Callback = function(val)
-		isAutoHatching = val
-		if val then task.spawn(autoHatchLoop) end
-		notify("AutoHatch", val and "ON" or "OFF")
-	end,
-})
-
--- ============================================================
--- TAB 5: FARM
--- ============================================================
-local FarmTab = Window:CreateTab("🌱 Farm", 4483362458)
-
-FarmTab:CreateSection("Crop Collection")
-
-FarmTab:CreateButton({ Name = "Collect All Crops Now", Callback = function() task.spawn(collectCrops) end })
-
-FarmTab:CreateToggle({ Name = "Auto Collect Crops", CurrentValue = false, Flag = "AutoCollect",
-	Callback = function(val)
-		isAutoCollect = val
-		if val then
-			task.spawn(function()
-				while isAutoCollect do
-					collectCrops()
-					task.wait(settings.collectInterval)
-				end
-			end)
-		end
-		notify("AutoCollect", val and "ON" or "OFF")
-	end,
-})
-
-FarmTab:CreateInput({ Name = "Collect Interval (seconds)", PlaceholderText = "Default: 10", RemoveTextAfterFocusLost = false, Flag = "CollectInterval",
-	Callback = function(v) local n = tonumber(v) if n then settings.collectInterval = n end end })
-
-FarmTab:CreateSection("Watering")
-
-FarmTab:CreateButton({ Name = "Water All Plants Now", Callback = function() task.spawn(waterPlants) end })
-
-FarmTab:CreateToggle({ Name = "Auto Water Plants", CurrentValue = false, Flag = "AutoWater",
-	Callback = function(val)
-		isAutoWatering = val
-		if val then task.spawn(autoWaterLoop) end
-		notify("AutoWater", val and "ON" or "OFF")
-	end,
-})
-
-FarmTab:CreateInput({ Name = "Water Amount", PlaceholderText = "Default: 2", RemoveTextAfterFocusLost = false, Flag = "WaterAmount",
-	Callback = function(v) local n = tonumber(v) if n then settings.waterAmount = n end end })
-
-FarmTab:CreateInput({ Name = "Water Interval (seconds)", PlaceholderText = "Default: 30", RemoveTextAfterFocusLost = false, Flag = "WaterInterval",
-	Callback = function(v) local n = tonumber(v) if n then settings.waterInterval = n end end })
-
-FarmTab:CreateSection("Seed Planting")
-
-FarmTab:CreateDropdown({
-	Name            = "Select Seeds to Plant",
-	Options         = SEED_LIST,
-	CurrentOption   = {},
-	MultipleOptions = true,
-	Flag            = "SeedSelect",
-	Callback        = function(val) selectedSeeds = val end,
-})
-
-FarmTab:CreateButton({ Name = "Plant Seeds Now", Callback = function() task.spawn(plantSeeds) end })
-
-FarmTab:CreateToggle({ Name = "Auto Plant Seeds", CurrentValue = false, Flag = "AutoPlant",
-	Callback = function(val)
-		isAutoPlanting = val
-		if val then task.spawn(autoPlantLoop) end
-		notify("AutoPlant", val and "ON" or "OFF")
-	end,
-})
-
--- ============================================================
--- TAB 6: SPRINKLER
--- ============================================================
-local SprinklerTab = Window:CreateTab("💧 Sprinkler", 4483362458)
-
-SprinklerTab:CreateSection("Sprinkler Control")
-
-SprinklerTab:CreateButton({ Name = "Place Sprinkler", Callback = function() task.spawn(placeSprinkler) end })
-SprinklerTab:CreateButton({ Name = "Remove All Sprinklers", Callback = function() task.spawn(removeAllSprinklers) end })
-
-SprinklerTab:CreateToggle({ Name = "Auto Place Sprinkler (every 60s)", CurrentValue = false, Flag = "AutoSprinkler",
-	Callback = function(val)
-		isAutoSprinkler = val
-		if val then task.spawn(autoSprinklerLoop) end
-		notify("Sprinkler", val and "ON" or "OFF")
-	end,
-})
-
--- ============================================================
--- TAB 7: COOKING
--- ============================================================
-local CookTab = Window:CreateTab("🍳 Cooking", 4483362458)
-
-CookTab:CreateSection("Ingredients (up to 5)")
-
-CookTab:CreateInput({ Name = "Ingredient 1", PlaceholderText = "Item name", RemoveTextAfterFocusLost = false, Flag = "Cook1",
-	Callback = function(v) cookingItems[1] = v end })
-CookTab:CreateInput({ Name = "Ingredient 2", PlaceholderText = "Item name", RemoveTextAfterFocusLost = false, Flag = "Cook2",
-	Callback = function(v) cookingItems[2] = v end })
-CookTab:CreateInput({ Name = "Ingredient 3", PlaceholderText = "Item name", RemoveTextAfterFocusLost = false, Flag = "Cook3",
-	Callback = function(v) cookingItems[3] = v end })
-CookTab:CreateInput({ Name = "Ingredient 4", PlaceholderText = "Item name", RemoveTextAfterFocusLost = false, Flag = "Cook4",
-	Callback = function(v) cookingItems[4] = v end })
-CookTab:CreateInput({ Name = "Ingredient 5", PlaceholderText = "Item name", RemoveTextAfterFocusLost = false, Flag = "Cook5",
-	Callback = function(v) cookingItems[5] = v end })
-
-CookTab:CreateSection("Controls")
-
-CookTab:CreateButton({ Name = "Start Cooking Now", Callback = function() task.spawn(startCooking) end })
-CookTab:CreateButton({ Name = "Collect Cooked Items", Callback = function() task.spawn(collectCooking) end })
-
-CookTab:CreateToggle({ Name = "Auto Cook Loop", CurrentValue = false, Flag = "AutoCook",
-	Callback = function(val)
-		isAutoCooking = val
-		if val then task.spawn(autoCookLoop) end
-		notify("AutoCook", val and "ON" or "OFF")
-	end,
-})
-
--- ============================================================
--- TAB 8: MUTATION
--- ============================================================
-local MutTab = Window:CreateTab("🧬 Mutation", 4483362458)
-
-MutTab:CreateSection("Mutation Machine")
-
-local mutUUID = ""
-MutTab:CreateInput({ Name = "Pet UUID", PlaceholderText = "Paste UUID here", RemoveTextAfterFocusLost = false, Flag = "MutUUID",
-	Callback = function(v) mutUUID = v end })
-
-MutTab:CreateButton({ Name = "Submit Pet to Machine", Callback = function() submitMutation(mutUUID) end })
-MutTab:CreateButton({ Name = "Collect from Machine", Callback = function() collectMutation() end })
-
--- ============================================================
--- TAB 9: SHOPS
--- ============================================================
-local ShopTab = Window:CreateTab("🛒 Shops", 4483362458)
-
-ShopTab:CreateSection("Buy Items")
-
-local shopItem = ""
-local shopAmt  = 1
-
-ShopTab:CreateInput({ Name = "Item Name", PlaceholderText = "e.g. Watering Can", RemoveTextAfterFocusLost = false, Flag = "ShopItem",
-	Callback = function(v) shopItem = v end })
-ShopTab:CreateInput({ Name = "Amount", PlaceholderText = "e.g. 1", RemoveTextAfterFocusLost = false, Flag = "ShopAmt",
-	Callback = function(v) local n = tonumber(v) if n then shopAmt = n end end })
-
-ShopTab:CreateButton({ Name = "Buy from Seed Shop", Callback = function() if shopItem ~= "" then buyFromSeedShop(shopItem, shopAmt) end end })
-ShopTab:CreateButton({ Name = "Buy from Gear Shop", Callback = function() if shopItem ~= "" then buyFromGearShop(shopItem, shopAmt) end end })
-ShopTab:CreateButton({ Name = "Buy Pet Egg", Callback = function() if shopItem ~= "" then buyEgg(shopItem, shopAmt) end end })
-ShopTab:CreateButton({ Name = "Buy from Event Shop", Callback = function() if shopItem ~= "" then buyFromEventShop(shopItem, shopAmt) end end })
-ShopTab:CreateButton({ Name = "Buy from Traveling Merchant", Callback = function() if shopItem ~= "" then buyFromTravelingMerchant(shopItem, shopAmt) end end })
-
--- ============================================================
--- GIFT & TRADE SYSTEM
--- ============================================================
-
-local giftSettings = {
-	enabled          = false,
-	autoTrade        = false,
-	autoConfirm      = false,
-	tradeAutoAccept  = false,
-	allowFav         = false,
-	minAge           = 1,
-	maxAge           = 2,
-	minWeight        = 0.80,
-	maxWeight        = 2.86,
-	customMode       = false,
-	delayBetweenGift = 9.9,
-	allowPetList     = {},
-	allowMutList     = {},
-	customPetUUIDs   = {},
-	playerTargets    = {},
-}
-
-local isGiftRunning  = false
-local isTradeWatcher = false
-
--- Load the real PetGiftingService module
-local PetGiftingModule = pcall(function()
-	return require(ReplicatedStorage.Modules.PetServices.PetGiftingService)
-end) and require(ReplicatedStorage.Modules.PetServices.PetGiftingService) or nil
-
--- Get all active players in server
-local function getActivePlayers()
-	local list = {}
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= player then
-			table.insert(list, p.Name)
-		end
-	end
-	return list
-end
-
--- Send a gift to a player using the real PetGiftingModule
-local function sendGift(targetPlayer)
-	if not PetGiftingModule then
-		-- Fallback: fire remote directly
-		pcall(function()
-			local giftRemote = GameEvents:FindFirstChild("GiftPet")
-				or GameEvents:FindFirstChild("PetGiftService")
-			if giftRemote then
-				giftRemote:FireServer(targetPlayer)
-			end
-		end)
-	else
-		pcall(function()
-			PetGiftingModule:GivePet(targetPlayer)
-		end)
-	end
-	notify("Gift", "Sent gift to " .. tostring(targetPlayer))
-end
-
--- Get pets from inventory that match gift filters
-local function getPetsForGifting()
-	local ok, data = pcall(function()
-		return DataStream:InvokeServer("GetInventory")
-	end)
-	if not ok or not data then return {} end
-
-	local pets = (data.PetInventory and data.PetInventory.Data) or {}
-	local result = {}
-
-	for uuid, petData in pairs(pets) do
-		if petData then
-			local weight  = petData.Weight or petData.Size or 0
-			local age     = petData.Age or 0
-			local fav     = petData.Favorited or false
-			local petName = petData.Name or petData.PetName or ""
-
-			-- Skip favorited unless allowed
-			if fav and not giftSettings.allowFav then
-				continue
-			end
-
-			-- Custom mode: only send specific UUIDs
-			if giftSettings.customMode then
-				for _, customUUID in ipairs(giftSettings.customPetUUIDs) do
-					if uuid == customUUID then
-						table.insert(result, { uuid = uuid, data = petData })
-						break
-					end
-				end
-				continue
-			end
-
-			-- Age filter
-			if age < giftSettings.minAge or age > giftSettings.maxAge then
-				continue
-			end
-
-			-- Weight filter
-			if weight < giftSettings.minWeight or weight > giftSettings.maxWeight then
-				continue
-			end
-
-			-- Pet name filter (if list is set)
-			if #giftSettings.allowPetList > 0 then
-				local allowed = false
-				for _, allowedName in ipairs(giftSettings.allowPetList) do
-					if petName == allowedName then
-						allowed = true
-						break
-					end
-				end
-				if not allowed then continue end
-			end
-
-			table.insert(result, { uuid = uuid, data = petData })
-		end
-	end
-
-	return result
-end
-
--- Auto gift loop
-local function autoGiftLoop()
-	while isGiftRunning do
-		if #giftSettings.playerTargets == 0 then
-			notify("Gift", "No target players set!")
-			task.wait(5)
-			continue
-		end
-
-		local petsToGift = getPetsForGifting()
-		if #petsToGift == 0 then
-			notify("Gift", "No pets match gift filters")
-			task.wait(5)
-			continue
-		end
-
-		for _, petInfo in ipairs(petsToGift) do
-			if not isGiftRunning then break end
-
-			for _, targetName in ipairs(giftSettings.playerTargets) do
-				local targetPlayer = Players:FindFirstChild(targetName)
-				if targetPlayer then
-					sendGift(targetPlayer)
-					task.wait(giftSettings.delayBetweenGift)
-				end
-			end
-		end
-
-		task.wait(2)
-	end
-end
-
--- ===== TRADE SYSTEM =====
-
--- Check if a trade UI is currently open
-local function isTradeActive()
-	local gui = player:FindFirstChild("PlayerGui")
-	if not gui then return false end
-	local tradingUI = gui:FindFirstChild("TradingUI")
-	return tradingUI and tradingUI.Enabled == true
-end
-
--- Check if other player is ready in trade
-local function isOtherPlayerReady()
-	local ok, result = pcall(function()
-		local gui = player.PlayerGui
-		local ui  = gui:FindFirstChild("TradingUI")
-		if not ui then return false end
-		local ready = ui.LiveTrade.OtherPlr.Ready.BackgroundTransparency
-		return ready and ready < 1
-	end)
-	return ok and result or false
-end
-
--- Click the Accept button in the trade UI (real UI interaction)
-local function clickTradeAccept()
-	pcall(function()
-		local gui       = player.PlayerGui
-		local tradingUI = gui:FindFirstChild("TradingUI")
-		if not tradingUI or not tradingUI.Enabled then return end
-
-		local liveTrade = tradingUI:FindFirstChild("LiveTrade")
-		local options   = liveTrade and liveTrade:FindFirstChild("Options")
-		local acceptBtn = options and options:FindFirstChild("Accept")
-
-		if acceptBtn then
-			-- Fire all connections on the button
-			for _, conn in ipairs(acceptBtn:GetConnections and acceptBtn:GetConnections() or {}) do
-				pcall(function() conn:Fire() end)
-			end
-			-- Also try simulating a click
-			pcall(function()
-				local vgui = game:GetService("VirtualInputManager")
-				if vgui then
-					vgui:SendMouseButtonEvent(
-						acceptBtn.AbsolutePosition.X + acceptBtn.AbsoluteSize.X / 2,
-						acceptBtn.AbsolutePosition.Y + acceptBtn.AbsoluteSize.Y / 2,
-						0, true, game, 1
-					)
-					task.wait(0.05)
-					vgui:SendMouseButtonEvent(
-						acceptBtn.AbsolutePosition.X + acceptBtn.AbsoluteSize.X / 2,
-						acceptBtn.AbsolutePosition.Y + acceptBtn.AbsoluteSize.Y / 2,
-						0, false, game, 1
-					)
-				end
-			end)
-		end
-	end)
-	notify("Trade", "Clicked Accept button")
-end
-
--- Add a pet to the current trade by UUID
-local function addPetToTrade(uuid)
-	pcall(function()
-		ReplicatedStorage.GameEvents.TradeEvents.AddItem:FireServer("Pet", uuid)
-	end)
-	notify("Trade", "Added pet to trade: " .. tostring(uuid))
-end
-
--- Auto trade accept watcher
-local function autoTradeWatcher()
-	while isTradeWatcher do
-		if isTradeActive() then
-			if giftSettings.tradeAutoAccept then
-				task.wait(0.5) -- small delay before accepting
-				clickTradeAccept()
-				notify("Trade", "Auto-accepted trade!")
-			end
-		end
-		task.wait(0.3)
-	end
-end
-
--- ============================================================
--- TAB 12: GIFT & TRADE
--- ============================================================
-local GiftTab = Window:CreateTab("🎁 Gift & Trade", 4483362458)
-
-GiftTab:CreateSection("Gift Settings")
-
-GiftTab:CreateToggle({ Name = "Allow Gifting Favorited Pets", CurrentValue = false, Flag = "GiftAllowFav",
-	Callback = function(v) giftSettings.allowFav = v end })
-
-GiftTab:CreateInput({ Name = "Min Age to Gift", PlaceholderText = "Default: 1", RemoveTextAfterFocusLost = false, Flag = "GiftMinAge",
-	Callback = function(v) local n = tonumber(v) if n then giftSettings.minAge = n end end })
-
-GiftTab:CreateInput({ Name = "Max Age to Gift", PlaceholderText = "Default: 2", RemoveTextAfterFocusLost = false, Flag = "GiftMaxAge",
-	Callback = function(v) local n = tonumber(v) if n then giftSettings.maxAge = n end end })
-
-GiftTab:CreateInput({ Name = "Min Weight to Gift", PlaceholderText = "Default: 0.80", RemoveTextAfterFocusLost = false, Flag = "GiftMinWeight",
-	Callback = function(v) local n = tonumber(v) if n then giftSettings.minWeight = n end end })
-
-GiftTab:CreateInput({ Name = "Max Weight to Gift", PlaceholderText = "Default: 2.86", RemoveTextAfterFocusLost = false, Flag = "GiftMaxWeight",
-	Callback = function(v) local n = tonumber(v) if n then giftSettings.maxWeight = n end end })
-
-GiftTab:CreateInput({ Name = "Delay Between Gifts (seconds)", PlaceholderText = "Default: 9.9", RemoveTextAfterFocusLost = false, Flag = "GiftDelay",
-	Callback = function(v) local n = tonumber(v) if n then giftSettings.delayBetweenGift = n end end })
-
-GiftTab:CreateSection("Pet Filter")
-
-GiftTab:CreateDropdown({
-	Name            = "Allowed Pet Names to Gift",
-	Options         = PET_LIST,
-	CurrentOption   = {},
-	MultipleOptions = true,
-	Flag            = "GiftPetList",
-	Callback        = function(val)
-		giftSettings.allowPetList = val
-		notify("Gift", "Pet filter: " .. #val .. " pets")
-	end,
-})
-
-GiftTab:CreateToggle({ Name = "Custom UUID Mode (only gift specific UUIDs)", CurrentValue = false, Flag = "GiftCustomMode",
-	Callback = function(v) giftSettings.customMode = v end })
-
-local customUUIDInput = ""
-GiftTab:CreateInput({ Name = "Add Custom Pet UUID", PlaceholderText = "Paste UUID then click Add", RemoveTextAfterFocusLost = false, Flag = "GiftCustomUUID",
-	Callback = function(v) customUUIDInput = v end })
-
-GiftTab:CreateButton({ Name = "Add UUID to Custom List",
-	Callback = function()
-		if customUUIDInput ~= "" then
-			table.insert(giftSettings.customPetUUIDs, customUUIDInput)
-			notify("Gift", "Added UUID: " .. customUUIDInput)
-			customUUIDInput = ""
-		end
-	end,
-})
-
-GiftTab:CreateButton({ Name = "Clear Custom UUID List",
-	Callback = function()
-		giftSettings.customPetUUIDs = {}
-		notify("Gift", "Custom UUID list cleared")
-	end,
-})
-
-GiftTab:CreateSection("Target Players")
-
-local playerTargetLabel = GiftTab:CreateLabel("Targets: None | Players in server: 0")
-
-GiftTab:CreateButton({ Name = "Refresh Player List",
-	Callback = function()
-		local players = getActivePlayers()
-		playerTargetLabel:Set("Players in server: " .. #players .. "\n" .. table.concat(players, ", "))
-	end,
-})
-
-local targetPlayerInput = ""
-GiftTab:CreateInput({ Name = "Add Target Player Name", PlaceholderText = "Enter player name", RemoveTextAfterFocusLost = false, Flag = "GiftTarget",
-	Callback = function(v) targetPlayerInput = v end })
-
-GiftTab:CreateButton({ Name = "Add Player to Targets",
-	Callback = function()
-		if targetPlayerInput ~= "" then
-			table.insert(giftSettings.playerTargets, targetPlayerInput)
-			playerTargetLabel:Set("Targets: " .. table.concat(giftSettings.playerTargets, ", "))
-			notify("Gift", "Added target: " .. targetPlayerInput)
-			targetPlayerInput = ""
-		end
-	end,
-})
-
-GiftTab:CreateButton({ Name = "Clear Target Players",
-	Callback = function()
-		giftSettings.playerTargets = {}
-		playerTargetLabel:Set("Targets: None")
-		notify("Gift", "Target list cleared")
-	end,
-})
-
-GiftTab:CreateSection("Gift Controls")
-
-GiftTab:CreateButton({ Name = "Send Gift Once (to all targets)",
-	Callback = function()
-		if #giftSettings.playerTargets == 0 then
-			notify("Gift", "Add target players first!")
-			return
-		end
-		task.spawn(function()
-			for _, targetName in ipairs(giftSettings.playerTargets) do
-				local targetPlayer = Players:FindFirstChild(targetName)
-				if targetPlayer then
-					sendGift(targetPlayer)
-					task.wait(giftSettings.delayBetweenGift)
-				else
-					notify("Gift", "Player not found: " .. targetName)
-				end
-			end
-		end)
-	end,
-})
-
-GiftTab:CreateToggle({ Name = "Auto Gift Loop", CurrentValue = false, Flag = "AutoGift",
-	Callback = function(val)
-		isGiftRunning = val
-		if val then
-			if #giftSettings.playerTargets == 0 then
-				notify("Gift", "Add target players first!")
-				isGiftRunning = false
-				return
-			end
-			task.spawn(autoGiftLoop)
-		end
-		notify("AutoGift", val and "ON" or "OFF")
-	end,
-})
-
-GiftTab:CreateSection("Trade System")
-
-GiftTab:CreateToggle({ Name = "Auto Accept Incoming Trades", CurrentValue = false, Flag = "TradeAutoAccept",
-	Callback = function(val)
-		giftSettings.tradeAutoAccept = val
-		isTradeWatcher = val
-		if val then task.spawn(autoTradeWatcher) end
-		notify("Trade", "Auto Accept: " .. (val and "ON" or "OFF"))
-	end,
-})
-
-GiftTab:CreateButton({ Name = "Accept Current Trade Now",
-	Callback = function()
-		if isTradeActive() then
-			clickTradeAccept()
-		else
-			notify("Trade", "No active trade found")
-		end
-	end,
-})
-
-local tradePetUUID = ""
-GiftTab:CreateInput({ Name = "Add Pet to Trade (UUID)", PlaceholderText = "Paste UUID", RemoveTextAfterFocusLost = false, Flag = "TradePetUUID",
-	Callback = function(v) tradePetUUID = v end })
-
-GiftTab:CreateButton({ Name = "Add Pet to Current Trade",
-	Callback = function()
-		if tradePetUUID ~= "" then
-			addPetToTrade(tradePetUUID)
-		else
-			notify("Trade", "Enter a pet UUID first")
-		end
-	end,
-})
-
-GiftTab:CreateButton({ Name = "Check Trade Status",
-	Callback = function()
-		local active = isTradeActive()
-		local ready  = isOtherPlayerReady()
-		notify("Trade", "Active: " .. tostring(active) .. " | Other Ready: " .. tostring(ready))
-	end,
-})
-local StatsTab = Window:CreateTab("📊 Stats", 4483362458)
-
-StatsTab:CreateSection("Live Statistics")
-
-local statsLabel = StatsTab:CreateLabel("No stats yet - start using features")
-
-StatsTab:CreateButton({ Name = "Clear All Stats",
-	Callback = function()
-		stats = { sniped=0, tokensSpent=0, totalScans=0, hatched=0, sold=0, collected=0, planted=0, history={} }
-		statsLabel:Set("Stats cleared")
-		notify("Stats","Cleared")
-	end,
-})
-
--- ============================================================
--- TAB 11: SETTINGS
--- ============================================================
-local SettingsTab = Window:CreateTab("⚙️ Settings", 4483362458)
-
-SettingsTab:CreateSection("General")
-
-SettingsTab:CreateToggle({ Name = "Enable Notifications", CurrentValue = true, Flag = "Notifs",
-	Callback = function(v) settings.notifications = v end })
-
-SettingsTab:CreateButton({ Name = "Reset All Settings",
-	Callback = function()
-		settings = {
-			maxPrice=100000, minKG=0, maxKG=10000, snipeSpeed=1,
-			autoTeleport=false, autoRejoin=false, notifications=true,
-			sellWeight=3.0, sellAge=0, sellOverrideFav=false,
-			waterAmount=2, waterInterval=30, collectInterval=10,
-		}
-		notify("Settings","Reset to defaults")
-	end,
-})
-
-SettingsTab:CreateSection("Hotkeys")
-SettingsTab:CreateLabel("F6 = Quick Start/Stop Sniping")
-SettingsTab:CreateLabel("LeftControl = Toggle UI Visibility")
-
--- ============================================================
--- LIVE STATS UPDATE (every 0.5s)
--- ============================================================
-local lastUpdate = 0
-RunService.Heartbeat:Connect(function()
-	local now = tick()
-	if now - lastUpdate < 0.5 then return end
-	lastUpdate = now
-
-	local avg = stats.sniped > 0 and math.floor(stats.tokensSpent / stats.sniped) or 0
-	local txt = "🎯 Sniped: "     .. stats.sniped
-		.. " | 💰 Spent: "        .. stats.tokensSpent
-		.. "\n🥚 Hatched: "        .. stats.hatched
-		.. " | 💸 Sold: "          .. stats.sold
-		.. "\n🌾 Collected: "       .. stats.collected
-		.. " | 🌱 Planted: "        .. stats.planted
-		.. "\n🔍 Scans: "           .. stats.totalScans
-		.. " | 📈 Avg Price: "      .. avg .. "t"
-		.. "\n⚡ Snipe: "           .. (isAutoSniping and "ACTIVE" or "IDLE")
-		.. " | 🌿 Farm: "           .. (isAutoCollect and "ON" or "OFF")
-		.. "\n\n📜 Recent Snipes:\n"
-
-	for i = math.max(1, #stats.history - 7), #stats.history do
-		local e = stats.history[i]
-		if e then
-			txt = txt .. e.time .. " | (" .. e.price .. ") " .. e.pet .. " (" .. e.kg .. "kg)\n"
-		end
-	end
-
 	statsLabel:Set(txt)
-	snipeStatusLabel:Set("Status: " .. (isAutoSniping and "ACTIVE" or "IDLE") .. " | Selected: " .. #selectedPets .. " pets")
-	hatchLabel:Set("Hatched: " .. stats.hatched .. " | Selected: " .. #selectedEggs .. " eggs")
+	snipeStatusLabel:Set("Status: "..(isAutoSniping and "ACTIVE" or "IDLE").." | Selected: "..#selectedPets.." pets")
+	hatchLabel:Set("Hatched: "..stats.hatched.." | Selected: "..#selectedEggs.." eggs")
 end)
 
 -- ============================================================
@@ -2504,11 +1982,20 @@ UserInputService.InputBegan:Connect(function(input, gp)
 			isAutoSniping = true
 			notify("F6","Sniping started")
 			task.spawn(snipeLoop)
+		end
+	elseif input.KeyCode == Enum.KeyCode.RightControl then
+		ScreenGui.Enabled = not ScreenGui.Enabled
+	elseif input.KeyCode == Enum.KeyCode.LeftControl then
+		minimized = not minimized
+		if minimized then
+			tween(MainFrame, { Size = UDim2.new(0, 620, 0, 42) }, 0.2)
+		else
+			tween(MainFrame, { Size = UDim2.new(0, 620, 0, 520) }, 0.2)
 		end
 	end
 end)
 
 print("✅ Rivet Hub 2 loaded!")
 print("   F6 = Start/Stop Sniping")
-print("   LeftControl = Toggle UI")
-print("   All features ready!")
+print("   RightControl = Toggle UI")
+print("   LeftControl = Minimize")
