@@ -1,21 +1,16 @@
+-- Rivet Hub 2 | Delta Compatible
 -- ============================================================
 -- RIVET HUB MAIN 2 - Grow a Garden Full Automation Hub
--- Rayfield UI | All Features | No External Dependencies
--- Game ID: 7436755782
+-- Pure Roblox Instance GUI | Delta Executor Compatible
+-- All WaitForChild replaced with safe pcall FindFirstChild
 -- ============================================================
 
-if not game:IsLoaded() then game.Loaded:Wait() end
-task.wait(1)
-
-if tostring(game.GameId) ~= "7436755782" then
-	warn("Wrong game! This is for Grow a Garden only.")
-	return
-end
-
-if _G.rivethub2_running then
-	warn("Rivet Hub 2 already running!")
-	return
-end
+-- Safe load guard (non-blocking)
+pcall(function()
+	if _G.rivethub2_running then
+		warn("Rivet Hub 2 already running!")
+	end
+end)
 _G.rivethub2_running = true
 
 -- ===== SERVICES =====
@@ -24,44 +19,65 @@ local ReplicatedStorage  = game:GetService("ReplicatedStorage")
 local RunService         = game:GetService("RunService")
 local UserInputService   = game:GetService("UserInputService")
 local TeleportService    = game:GetService("TeleportService")
-local MarketplaceService = game:GetService("MarketplaceService")
+local TweenService       = game:GetService("TweenService")
 
-local player    = Players.LocalPlayer
+local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
--- ===== GAME REMOTES =====
-local GameEvents          = ReplicatedStorage:WaitForChild("GameEvents")
-local PetsService         = GameEvents:WaitForChild("PetsService")
-local PetEggService       = GameEvents:WaitForChild("PetEggService")
-local SellPet_RE          = GameEvents:WaitForChild("SellPet_RE")
-local SellAllPets_RE      = GameEvents:WaitForChild("SellAllPets_RE")
-local SellPetShopSelected = GameEvents:WaitForChild("SellPetShopSelected")
-local FavItem             = GameEvents:WaitForChild("Favorite_Item")
-local ActivePetService    = GameEvents:WaitForChild("ActivePetService")
-local DataStream          = GameEvents.DataStream
-local BuyGearStock        = GameEvents:FindFirstChild("BuyGearStock")
-local BuySeedStock        = GameEvents.BuySeedStock
-local BuyPetEgg           = GameEvents:FindFirstChild("BuyPetEgg")
-local BuyTravelingMerchant = GameEvents:WaitForChild("BuyTravelingMerchantShopStock")
-local BuyEventShopStock   = GameEvents:WaitForChild("BuyEventShopStock")
-local PlantRemote         = GameEvents:WaitForChild("Plant_RE")
-local CollectEvent        = GameEvents:WaitForChild("Crops"):WaitForChild("Collect")
-local BoostService        = GameEvents:WaitForChild("PetBoostService")
-local MutationService     = GameEvents:WaitForChild("PetMutationMachineService_RE")
-local SprinklerService    = GameEvents:WaitForChild("SprinklerService")
-local Water_RE            = GameEvents:WaitForChild("Water_RE")
-local TrowelRemote        = GameEvents:WaitForChild("TrowelRemote")
-local PetLeadService_RE   = GameEvents.PetLeadService_RE
-local TryUseGear          = GameEvents.TryUseGear
-local Sell_Inventory      = GameEvents.Sell_Inventory
-local Remove_Item         = GameEvents.Remove_Item
-local DeleteObject        = ReplicatedStorage.GameEvents.DeleteObject
-local CookingPotService   = GameEvents:WaitForChild("CookingPotService_RE")
-local CraftingService     = GameEvents:WaitForChild("CraftingGlobalObjectService")
-local BonfireService      = GameEvents:WaitForChild("BonfireService")
-local SprayService_RE     = GameEvents:WaitForChild("SprayService_RE")
+-- ===== SAFE REMOTE LOADER =====
+local function safeFind(parent, name)
+	if not parent then return nil end
+	local ok, result = pcall(function() return parent:FindFirstChild(name) end)
+	if ok then return result end
+	return nil
+end
 
--- ===== CUSTOM GUI (Obsidian-style) =====
+local function safeGet(parent, ...)
+	local cur = parent
+	for _, name in ipairs({...}) do
+		cur = safeFind(cur, name)
+		if not cur then return nil end
+	end
+	return cur
+end
+
+-- ===== GAME REMOTES (all safe, no WaitForChild) =====
+local GameEvents          = safeFind(ReplicatedStorage, "GameEvents")
+local PetsService         = safeGet(GameEvents, "PetsService")
+local PetEggService       = safeGet(GameEvents, "PetEggService")
+local SellPet_RE          = safeGet(GameEvents, "SellPet_RE")
+local SellAllPets_RE      = safeGet(GameEvents, "SellAllPets_RE")
+local SellPetShopSelected = safeGet(GameEvents, "SellPetShopSelected")
+local FavItem             = safeGet(GameEvents, "Favorite_Item")
+local ActivePetService    = safeGet(GameEvents, "ActivePetService")
+local DataStream          = safeGet(GameEvents, "DataStream")
+local BuyGearStock        = safeGet(GameEvents, "BuyGearStock")
+local BuySeedStock        = safeGet(GameEvents, "BuySeedStock")
+local BuyPetEgg           = safeGet(GameEvents, "BuyPetEgg")
+local BuyTravelingMerchant = safeGet(GameEvents, "BuyTravelingMerchantShopStock")
+local BuyEventShopStock   = safeGet(GameEvents, "BuyEventShopStock")
+local PlantRemote         = safeGet(GameEvents, "Plant_RE")
+local CollectEvent        = safeGet(GameEvents, "Crops", "Collect")
+local BoostService        = safeGet(GameEvents, "PetBoostService")
+local MutationService     = safeGet(GameEvents, "PetMutationMachineService_RE")
+local SprinklerService    = safeGet(GameEvents, "SprinklerService")
+local Water_RE            = safeGet(GameEvents, "Water_RE")
+local TrowelRemote        = safeGet(GameEvents, "TrowelRemote")
+local PetLeadService_RE   = safeGet(GameEvents, "PetLeadService_RE")
+local TryUseGear          = safeGet(GameEvents, "TryUseGear")
+local Sell_Inventory      = safeGet(GameEvents, "Sell_Inventory")
+local Remove_Item         = safeGet(GameEvents, "Remove_Item")
+local DeleteObject        = safeGet(GameEvents, "DeleteObject")
+local CookingPotService   = safeGet(GameEvents, "CookingPotService_RE")
+local CraftingService     = safeGet(GameEvents, "CraftingGlobalObjectService")
+local BonfireService      = safeGet(GameEvents, "BonfireService")
+local SprayService_RE     = safeGet(GameEvents, "SprayService_RE")
+local GiftService         = safeGet(GameEvents, "GiftService") or safeGet(GameEvents, "Gift_RE") or safeGet(GameEvents, "GiftPet_RE")
+local TradeService        = safeGet(GameEvents, "TradeService") or safeGet(GameEvents, "Trade_RE")
+local AscensionRemote     = safeGet(GameEvents, "AscensionService") or safeGet(GameEvents, "Ascension_RE") or safeGet(GameEvents, "Ascend")
+local ShovelRemote        = safeGet(GameEvents, "ShovelService") or safeGet(GameEvents, "Shovel_RE") or TrowelRemote
+local PetLevelRemote      = safeGet(GameEvents, "PetLevelService") or safeGet(GameEvents, "PetLevel_RE") or safeGet(GameEvents, "LevelUpPet")
+local ReclaimerRemote     = safeGet(GameEvents, "ReclaimerService_RE") or safeGet(GameEvents, "Reclaimer")
 
 -- ===== STATE =====
 local selectedPets    = {}
@@ -78,6 +94,13 @@ local isAutoWatering  = false
 local isAutoPlanting  = false
 local isAutoSprinkler = false
 local isAutoCooking   = false
+local isGiftRunning   = false
+local isTradeWatcher  = false
+local autoFavAfterHatch = false
+local sellModeHatchSelected = false
+local autoRejoinCount   = 0
+local hatchRejoinLimit  = 30
+local isAutoRejoinDC    = false
 
 local stats = {
 	sniped      = 0,
@@ -106,531 +129,24 @@ local settings = {
 	collectInterval = 10,
 }
 
--- ===== ALL 364 PETS =====
-local PET_LIST = {
-	"Bagel Bunny","Black Bird","Bunny","Chipmunk","Crab","Crow","Dairy Cow","Dog","Gecko","Golden Lab","Ladybug","Oxpecker","Pumpkin Rat","Robin","Seagull","Sheckling","Snow Bunny","Starfish","Termite",
-	"Angora Goat","Bacon Pig","Bat","Bee","Black Bunny","Blue Jay","Cardinal","Cat","Chicken","Clam","Deer","Elk","Farmer Chipmunk","French Hen","Goat","Hyena","Hyrax","Jackalope","Maneki-neko","New Year's Bird","Pink Bunny","Salmon","Scarab","Shiba Inu","Sunny-Side Chicken","Unicycle Monkey","Wasp",
-	"Armadillo","Badger","Bone Dog","Cape Buffalo","Christmas Gorilla","Chubby Chipmunk","Easter Egg Chick","Firemite","Firework Sprite","Flamingo","Geode Turtle","Ghost Bear","Gift Rat","Goblin","Hedgehog","Honey Bee","Hummingbird","Kiwi","Kiwi (Pet)","Messenger Pigeon","Monkey","Nihonzaru","Orange Tabby","Orangutan","Pancake Mole","Partridge","Performer Seal","Pig","Pixie","Red Squirrel","Rooster","Sea Turtle","Seal","Smithing Dog","Snowman Soldier","Spotted Deer","Topaz Snail","Toucan","Tree Frog","Tsuchinoko","Turtle Dove","Woodpecker","Zebra",
-	"Amethyst Beetle","Ash Raven","Bald Eagle","Bear on Bike","Blood Hedgehog","Calico","Capybara","Caterpillar","Celebration Puppy","Champion Beetle","Cheetah","Corrupted Kodama","Cow","Cuckoo","Emerald Snake","Football","Fortune Squirrel","Frog","German Shepherd","Giraffe","Gorilla Chef","Grey Mouse","Grizzly Bear","Gummy Bear","Hippo","Hotdog Daschund","Idol Chipmunk","Iguana","Iguanodon","Imp","Kodama","Magpie","Mallard","Mandrake","Mandrake (Pet)","Marmot","Marshmallow Lamb","Meerkat","Mole","Moon Cat","Moth","Ostrich","Pachycephalosaurus","Panda","Parasaurolophus","Peacock","Petal Bee","Pine Beetle","Pink Panda","Polar Bear","Raptor","Reindeer","Sand Snake","Scarlet Macaw","Sea Otter","Seedling","Shroomie","Silver Dragonfly","Silver Monkey","Silver Piggy","Snail","Snowman Builder","Specter","Spider","Stag Beetle","Stegosaurus","Stork","Sushi Bear","Tanchozuru","Tanuki","Tarantula Hawk","Tomb Marmot","Trapdoor Spider","Triceratops","Turtle","Wisp","Wolf","Woody",
-	"Ankylosaurus","Apple Gazelle","Arctic Fox","Axolotl","Barn Owl","Bear Bee","Black Cat","Blood Kiwi","Brontosaurus","Brown Mouse","Brown Owl","Butterfly","Camel","Chicken Zombie","Chimpanzee","Cocoa Cat","Cooked Owl","Crocodile","Dark Spriggan","Dilophosaurus","Drake","Echo Frog","Eggnog Chick","Firefly","Galah Cockatoo","Giant Ant","Glimmering Sprite","Goblin Gardener","Goblin Miner","Golden Bee","Golden Piggy","Golem","Hamster","Hazehound","Hootsie Roll","Hyacinth Macaw","Junkbot","Kappa","Koi","Lemon Lion","Mantis Shrimp","Mimic Octopus","Mistletoad","Mochi Mouse","New Year's Chimp","Night Owl","Nutcracker","Owl","Pack Bee","Pack Mule","Peach Wasp","Penguin","Praying Mantis","Pterodactyl","Red Dragon","Red Giant Ant","Rhino","Sapphire Macaw","Show Pony","Spaghetti Sloth","Spriggan","Squirrel","Sugar Glider","Summer Kiwi",
-	"Bearded Dragon","Blood Owl","Carnival Elephant","Cerberus","Chimera","Chinchilla","Cockatrice","Diamond Panther","Disco Bee","Dragonfly","Elephant","Fennec Fox","French Fry Ferret","Frost Dragon","Golden Goose","Green Bean","Griffin","Hex Serpent","Hydra","Krampus","Lich","Lion","Lobster Thermidor","Luminous Sprite","Mizuchi","Mummy","Orchid Mantis","Phoenix","Queen Bee","Raccoon","Raiju","Reaper","Red Fox","Red Panda","Red Rose Fox","Red-Nosed Reindeer","Ruby Squid","Space Squirrel","Spinosaurus","Star Wolf","Swan","T-Rex","Tiger","Water Buffalo","Wind Wyvern","Yeti",
-	"Birb","Corrupted Kitsune","Gold Finch","Headless Horseman","Ice Golem","Kitsune","Kitsune (Pet)","New Year's Dragon","Gnome",
-	"Beaver","Chocolate Bunny","Easter Bunny","Festive Frost Squirrel","Festive Ice Golem","Festive Moose","Festive Nutcracker","Festive Partridge","Festive Premium Christmas Egg","Festive Premium Winter Egg","Festive Reindeer","Festive Santa Bear","Festive Turtle Dove","Festive Wendigo","Festive Yeti","Frost Squirrel","Ghostly Bat","Ghostly Black Cat","Ghostly Bone Dog","Ghostly Headless Horseman","Ghostly Mummy","Ghostly Premium Spooky Egg","Ghostly Spider","GIANT Badger","GIANT Barn Owl","GIANT Grizzly Bear","GIANT Premium Fall Egg","GIANT Robin","GIANT Swan","Gilded Choc Chocolate Bunny","Gilded Choc Easter Bunny","Gilded Choc Easter Egg Chick","Gilded Choc Jerboa","Gilded Choc Marshmallow Lamb","Gilded Choc Nyala","Gilded Choc Peryton","Gilded Choc Spring Bee","Goblin?","Jerboa","Moose","Nyala","Peryton","Queen Bee (Pet)","Rainbow Ankylosaurus","Rainbow Bear on Bike","Rainbow Birb","Rainbow Black Bird","Rainbow Brown Owl","Rainbow Carnival Elephant","Rainbow Celebration Puppy","Rainbow Cuckoo","Rainbow Dilophosaurus","Rainbow Elephant","Rainbow Firework Sprite","Rainbow Giraffe","Rainbow Gold Finch","Rainbow Iguanodon","Rainbow New Year's Bird","Rainbow New Year's Chimp","Rainbow New Year's Dragon","Rainbow Oxpecker","Rainbow Pachycephalosaurus","Rainbow Parasaurolophus","Rainbow Performer Seal","Rainbow Premium Bird Egg","Rainbow Premium Carnival Egg","Rainbow Premium New Year's Egg","Rainbow Premium Primal Egg","Rainbow Premium Safari Egg","Rainbow Rhino","Rainbow Show Pony","Rainbow Spinosaurus","Rainbow Star Wolf","Rainbow Unicycle Monkey","Rainbow Zebra","Santa Bear","Spring Bee","Wendigo"
+local giftSettings = {
+	allowFav          = false,
+	minAge            = 1,
+	maxAge            = 2,
+	minWeight         = 0.80,
+	maxWeight         = 2.86,
+	delayBetweenGift  = 9.9,
+	allowPetList      = {},
+	customMode        = false,
+	customPetUUIDs    = {},
+	playerTargets     = {},
+	tradeAutoAccept   = false,
 }
-
-local PET_SET = {}
-for _, n in ipairs(PET_LIST) do PET_SET[n] = true end
-
-local EGG_LIST = {
-	"Common Egg","Uncommon Egg","Rare Egg","Bird Egg","Carnival Egg","New Year's Egg",
-	"Winter Egg","Christmas Egg","Gem Egg","Safari Egg","Spooky Egg","Jungle Egg",
-	"Fall Egg","Common Summer Egg","Rare Summer Egg","Mythical Egg","Legendary Egg",
-	"Enchanted Egg","Paradise Egg","Bug Egg","Zen Egg","Primal Egg","Dinosaur Egg",
-	"Sprout Egg","Bee Egg","Anti Bee Egg","Oasis Egg","Gourmet Egg","Night Egg",
-	"Premium Bird Egg","Premium Carnival Egg","Premium New Year's Egg","Premium Winter Egg",
-	"Premium Christmas Egg","Premium Primal Egg","Premium Anti Bee Egg","Premium Oasis Egg",
-	"Rainbow Premium Bird Egg","Rainbow Premium Carnival Egg","Rainbow Premium New Year's Egg",
-	"Rainbow Premium Primal Egg","Rainbow Premium Safari Egg","Exotic Bug Egg",
-	"Festive Premium Christmas Egg","Festive Premium Winter Egg",
-}
-
-local SEED_LIST = {
-	"Carrot","Strawberry","Blueberry","Orange Tulip","Tomato","Corn","Daffodil",
-	"Watermelon","Pumpkin","Apple","Bamboo","Coconut","Cactus","Dragon Fruit",
-	"Mango","Grape","Mushroom","Pepper","Sunflower","Beanstalk","Wheat","Potato",
-	"Onion","Garlic","Ginger","Lavender","Rose","Sunflower","Lily","Daisy",
-}
-
--- ===== HELPERS =====
-local function notify(title, msg)
-	if not settings.notifications then return end
-	print("[RivetHub2] " .. title .. ": " .. tostring(msg))
-end
-
-local function getPrice(obj)
-	for _, name in ipairs({"Price","Cost","TokenPrice","Tokens","BuyPrice","Value"}) do
-		local v = obj:FindFirstChild(name)
-		if v and (v:IsA("NumberValue") or v:IsA("IntValue")) and v.Value > 0 then
-			return v.Value
-		end
-	end
-	for _, child in ipairs(obj:GetChildren()) do
-		for _, name in ipairs({"Price","Cost","TokenPrice"}) do
-			local v = child:FindFirstChild(name)
-			if v and (v:IsA("NumberValue") or v:IsA("IntValue")) and v.Value > 0 then
-				return v.Value
-			end
-		end
-	end
-	return 0
-end
-
-local function getKG(obj)
-	for _, name in ipairs({"KG","Kg","kg","Weight","Mass"}) do
-		local v = obj:FindFirstChild(name)
-		if v and (v:IsA("NumberValue") or v:IsA("IntValue")) then
-			return v.Value
-		end
-	end
-	return 0
-end
-
-local function teleportTo(obj)
-	local char = player.Character
-	if not char then return end
-	local root = char:FindFirstChild("HumanoidRootPart")
-	if not root then return end
-	pcall(function()
-		if obj:IsA("BasePart") then
-			root.CFrame = obj.CFrame + Vector3.new(0, 5, 0)
-		elseif obj:IsA("Model") and obj.PrimaryPart then
-			root.CFrame = obj.PrimaryPart.CFrame + Vector3.new(0, 5, 0)
-		end
-	end)
-end
-
--- ===== SCAN BOOTHS =====
-local function scanBooths()
-	boothsData     = {}
-	stats.totalScans += 1
-	local petsToScan = #scanPets > 0 and scanPets or PET_LIST
-	local scanSet    = {}
-	for _, n in ipairs(petsToScan) do scanSet[n] = true end
-	local found = 0
-	local seen  = {}
-	local descendants = workspace:GetDescendants()
-	for i = 1, #descendants, 50 do
-		for j = i, math.min(i + 49, #descendants) do
-			local obj = descendants[j]
-			if obj and not seen[obj] and scanSet[obj.Name] then
-				seen[obj] = true
-				local price = getPrice(obj)
-				local kg    = getKG(obj)
-				local passKG = (kg == 0) or (kg >= settings.minKG and kg <= settings.maxKG)
-				if price <= settings.maxPrice and passKG then
-					found += 1
-					local boothName = "Unknown"
-					local anc = obj.Parent
-					for _ = 1, 4 do
-						if anc and anc ~= workspace then
-							boothName = anc.Name
-							anc = anc.Parent
-						else break end
-					end
-					table.insert(boothsData, {
-						Name   = obj.Name,
-						Booth  = boothName,
-						Price  = price,
-						KG     = kg,
-						Object = obj,
-					})
-				end
-			end
-		end
-		task.wait()
-	end
-	notify("Scan", found .. " pets found in budget")
-	return found
-end
-
--- ===== SNIPE LOOP =====
-local function snipeLoop()
-	while isAutoSniping do
-		if #selectedPets == 0 then task.wait(1) continue end
-		scanBooths()
-		for _, booth in ipairs(boothsData) do
-			if not isAutoSniping then break end
-			for _, want in ipairs(selectedPets) do
-				if booth.Name == want then
-					stats.sniped      += 1
-					stats.tokensSpent += booth.Price
-					table.insert(stats.history, {
-						pet   = booth.Name,
-						price = booth.Price,
-						booth = booth.Booth,
-						kg    = booth.KG,
-						time  = os.date("%H:%M:%S"),
-					})
-					if #stats.history > 50 then table.remove(stats.history, 1) end
-					notify("SNIPED", booth.Name .. " | " .. booth.Price .. "t | " .. booth.KG .. "kg")
-					if settings.autoTeleport and booth.Object then
-						teleportTo(booth.Object)
-					end
-					if settings.autoRejoin then
-						task.wait(2)
-						TeleportService:Teleport(game.PlaceId, player)
-					end
-					break
-				end
-			end
-		end
-		task.wait(math.max(0.1, 1 / settings.snipeSpeed))
-	end
-end
-
-local function autoScanLoop()
-	while isAutoScanning do
-		scanBooths()
-		task.wait(5)
-	end
-end
-
--- ===== PET TOOLS =====
-local function sellPetByUUID(uuid)
-	if not uuid or uuid == "" then return end
-	pcall(function() SellPetShopSelected:FireServer(uuid) end)
-	stats.sold += 1
-	notify("Sell", "Sold UUID: " .. uuid)
-end
-
-local function favoritePet(uuid, state)
-	if not uuid or uuid == "" then return end
-	pcall(function() FavItem:FireServer(uuid, state) end)
-	notify("Fav", (state and "Favorited" or "Unfavorited") .. ": " .. uuid)
-end
-
-local function sellAllUnfavorited()
-	pcall(function() SellAllPets_RE:FireServer() end)
-	notify("Sell", "Fired SellAllPets remote")
-end
-
-local function autoSellByFilter()
-	local ok, data = pcall(function()
-		return DataStream:InvokeServer("GetInventory")
-	end)
-	if not ok or not data then
-		notify("Sell", "Could not get inventory")
-		return
-	end
-	local pets = (data.PetInventory and data.PetInventory.Data) or {}
-	local count = 0
-	for uuid, petData in pairs(pets) do
-		if petData then
-			local weight = petData.Weight or petData.Size or 0
-			local age    = petData.Age or 0
-			local fav    = petData.Favorited or false
-			local sell   = false
-			if settings.sellWeight > 0 and weight > settings.sellWeight then sell = true end
-			if settings.sellAge > 0 and age > settings.sellAge then sell = true end
-			if fav and not settings.sellOverrideFav then sell = false end
-			if sell then
-				sellPetByUUID(uuid)
-				count += 1
-				task.wait(0.15)
-			end
-		end
-	end
-	notify("AutoSell", "Sold " .. count .. " pets")
-end
-
--- ===== AUTO HATCH =====
-local function hatchEgg(eggName)
-	local backpack = player:FindFirstChild("Backpack")
-	if not backpack then return false end
-	local egg = backpack:FindFirstChild(eggName)
-		or (player.Character and player.Character:FindFirstChild(eggName))
-	if not egg then return false end
-	local ok = pcall(function()
-		PetEggService:FireServer("PlaceEgg", egg)
-		task.wait(0.3)
-		PetEggService:FireServer("HatchEgg", egg)
-	end)
-	if ok then
-		stats.hatched += 1
-		notify("Hatch", "Hatched: " .. eggName)
-	end
-	return ok
-end
-
-local function autoHatchLoop()
-	while isAutoHatching do
-		if #selectedEggs == 0 then task.wait(1) continue end
-		for _, egg in ipairs(selectedEggs) do
-			if not isAutoHatching then break end
-			hatchEgg(egg)
-			task.wait(0.5)
-		end
-		task.wait(1)
-	end
-end
-
--- ===== FARM - COLLECT =====
-local function collectCrops()
-	local count = 0
-	pcall(function()
-		for _, obj in ipairs(workspace:GetDescendants()) do
-			if obj:IsA("Model") and obj:FindFirstChild("Crop") then
-				CollectEvent:FireServer(obj)
-				count += 1
-				task.wait(0.1)
-			end
-		end
-	end)
-	stats.collected += count
-	notify("Collect", "Collected " .. count .. " crops")
-end
-
--- ===== FARM - WATER =====
-local function waterPlants()
-	local count = 0
-	pcall(function()
-		for _, obj in ipairs(workspace:GetDescendants()) do
-			if obj:IsA("Model") and (obj:FindFirstChild("Plant") or obj:FindFirstChild("Seed")) then
-				Water_RE:FireServer(obj, settings.waterAmount)
-				count += 1
-				task.wait(0.3)
-			end
-		end
-	end)
-	notify("Water", "Watered " .. count .. " plants")
-end
-
-local function autoWaterLoop()
-	while isAutoWatering do
-		waterPlants()
-		task.wait(settings.waterInterval)
-	end
-end
-
--- ===== FARM - PLANT SEEDS =====
-local function plantSeeds()
-	if #selectedSeeds == 0 then notify("Plant","No seeds selected") return end
-	local backpack = player:FindFirstChild("Backpack")
-	if not backpack then return end
-	local plots = {}
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		if (obj.Name == "Plot" or obj.Name == "FarmPlot" or obj.Name == "GardenPlot")
-			and (obj:IsA("Model") or obj:IsA("BasePart"))
-			and not obj:FindFirstChild("Plant")
-			and not obj:FindFirstChild("Seed") then
-			table.insert(plots, obj)
-		end
-	end
-	local planted = 0
-	for _, seedName in ipairs(selectedSeeds) do
-		local seed = backpack:FindFirstChild(seedName)
-		if seed and #plots > 0 then
-			local plot = table.remove(plots, 1)
-			pcall(function() PlantRemote:FireServer(seed, plot) end)
-			planted += 1
-			stats.planted += 1
-			task.wait(0.3)
-		end
-	end
-	notify("Plant", "Planted " .. planted .. " seeds")
-end
-
-local function autoPlantLoop()
-	while isAutoPlanting do
-		plantSeeds()
-		task.wait(10)
-	end
-end
-
--- ===== SPRINKLER =====
-local function placeSprinkler()
-	local backpack = player:FindFirstChild("Backpack")
-	if not backpack then return end
-	local sprinkler = backpack:FindFirstChild("Grandmaster Sprinkler")
-		or backpack:FindFirstChild("Godly Sprinkler")
-		or backpack:FindFirstChild("Master Sprinkler")
-		or backpack:FindFirstChild("Sprinkler")
-	if not sprinkler then notify("Sprinkler","No sprinkler in backpack") return end
-	pcall(function() SprinklerService:FireServer("Place", sprinkler) end)
-	notify("Sprinkler", "Placed: " .. sprinkler.Name)
-end
-
-local function removeAllSprinklers()
-	pcall(function() SprinklerService:FireServer("RemoveAll") end)
-	notify("Sprinkler", "Removed all sprinklers")
-end
-
-local function autoSprinklerLoop()
-	while isAutoSprinkler do
-		placeSprinkler()
-		task.wait(60)
-	end
-end
-
--- ===== COOKING =====
-local function startCooking()
-	local hasItem = false
-	for _, v in ipairs(cookingItems) do if v ~= "" then hasItem = true break end end
-	if not hasItem then notify("Cook","Set ingredients first") return end
-	pcall(function()
-		CookingPotService:FireServer("StartCooking",
-			cookingItems[1], cookingItems[2], cookingItems[3],
-			cookingItems[4], cookingItems[5])
-	end)
-	notify("Cook", "Started cooking")
-end
-
-local function collectCooking()
-	pcall(function() CookingPotService:FireServer("Collect") end)
-	notify("Cook", "Collected cooked items")
-end
-
-local function autoCookLoop()
-	while isAutoCooking do
-		startCooking()
-		task.wait(30)
-		collectCooking()
-		task.wait(2)
-	end
-end
-
--- ===== MUTATION MACHINE =====
-local function submitMutation(uuid)
-	if not uuid or uuid == "" then return end
-	pcall(function() MutationService:FireServer("Submit", uuid) end)
-	notify("Mutation", "Submitted pet to machine")
-end
-
-local function collectMutation()
-	pcall(function() MutationService:FireServer("Collect") end)
-	notify("Mutation", "Collected from machine")
-end
-
--- ===== PET BOOST =====
-local function boostPet(uuid, item)
-	if not uuid or uuid == "" then return end
-	pcall(function() BoostService:FireServer("ApplyBoost", uuid, item) end)
-	notify("Boost", "Applied " .. tostring(item) .. " to pet")
-end
-
--- ===== BONFIRE =====
-local function useBonfire()
-	pcall(function() BonfireService:FireServer("Use") end)
-	notify("Bonfire", "Used bonfire")
-end
-
--- ===== SHOPS =====
-local function buyFromSeedShop(item, amount)
-	pcall(function() BuySeedStock:FireServer(item, amount or 1) end)
-	notify("Shop", "Bought " .. (amount or 1) .. "x " .. item)
-end
-
-local function buyFromGearShop(item, amount)
-	pcall(function() BuyGearStock:FireServer(item, amount or 1) end)
-	notify("Shop", "Bought " .. (amount or 1) .. "x " .. item)
-end
-
-local function buyEgg(eggName, amount)
-	pcall(function() BuyPetEgg:FireServer(eggName, amount or 1) end)
-	notify("Shop", "Bought " .. (amount or 1) .. "x " .. eggName)
-end
-
-local function buyFromEventShop(item, amount)
-	pcall(function() BuyEventShopStock:FireServer(item, amount or 1) end)
-	notify("Shop", "Bought " .. (amount or 1) .. "x " .. item)
-end
-
-local function buyFromTravelingMerchant(item, amount)
-	pcall(function() BuyTravelingMerchant:FireServer(item, amount or 1) end)
-	notify("Shop", "Bought " .. (amount or 1) .. "x " .. item .. " from merchant")
-end
-
--- ============================================================
--- ANTI-IDLE
--- ============================================================
-local function disableIdle()
-	pcall(function()
-		local connections = getconnections or get_signal_cons
-		if connections then
-			for _, v in pairs(connections(player.Idled)) do
-				if v.Disable then v:Disable()
-				elseif v.Disconnect then v:Disconnect() end
-			end
-		end
-	end)
-	notify("Anti-Idle", "Idle detection disabled")
-end
-pcall(disableIdle) -- run on load
-
--- ============================================================
--- AUTO REJOIN
--- ============================================================
-local autoRejoinCount   = 0
-local hatchRejoinLimit  = 30
-local isAutoRejoinDC    = false
-
-local function rejoinGame()
-	notify("Rejoin", "Rejoining in 3 seconds...")
-	task.wait(3)
-	pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
-end
-
--- ============================================================
--- REMOVE WEATHER VISUALS
--- ============================================================
-local function removeWeather()
-	pcall(function()
-		local lighting = game:GetService("Lighting")
-		lighting.GlobalShadows = false
-		lighting.FogEnd = 100000
-		lighting.FogStart = 100000
-		-- Remove weather effects
-		for _, obj in ipairs(lighting:GetChildren()) do
-			if obj:IsA("Atmosphere") or obj:IsA("Sky") or obj:IsA("BloomEffect")
-				or obj:IsA("DepthOfFieldEffect") or obj:IsA("SunRaysEffect") then
-				obj.Enabled = false
-			end
-		end
-		-- Remove rain/snow particles in workspace
-		for _, obj in ipairs(workspace:GetDescendants()) do
-			if obj:IsA("ParticleEmitter") and (
-				obj.Name:lower():find("rain") or obj.Name:lower():find("snow")
-				or obj.Name:lower():find("weather") or obj.Name:lower():find("fog")
-			) then
-				obj.Enabled = false
-			end
-		end
-	end)
-	notify("Weather", "Weather visuals removed")
-end
-
--- ============================================================
--- ASCENSION SYSTEM
--- ============================================================
-local AscensionRemote = nil
-pcall(function()
-	AscensionRemote = GameEvents:FindFirstChild("AscensionService")
-		or GameEvents:FindFirstChild("Ascension_RE")
-		or GameEvents:FindFirstChild("Ascend")
-end)
 
 local ascensionSettings = {
 	maxSeeds   = 1,
 	autoAscend = false,
 }
-
-local function doAscension()
-	if not AscensionRemote then
-		notify("Ascension", "Ascension remote not found")
-		return
-	end
-	pcall(function()
-		AscensionRemote:FireServer("Ascend", ascensionSettings.maxSeeds)
-	end)
-	notify("Ascension", "Ascension fired!")
-end
-
-local function autoAscensionLoop()
-	while ascensionSettings.autoAscend do
-		doAscension()
-		task.wait(10)
-	end
-end
-
--- ============================================================
--- SHOVEL SYSTEM
--- ============================================================
-local ShovelRemote = nil
-pcall(function()
-	ShovelRemote = GameEvents:FindFirstChild("ShovelService")
-		or GameEvents:FindFirstChild("Shovel_RE")
-		or TrowelRemote
-end)
 
 local shovelSettings = {
 	keepAmount  = 0,
@@ -638,312 +154,839 @@ local shovelSettings = {
 	isRunning   = false,
 }
 
-local function shovelPlants()
-	if not ShovelRemote then notify("Shovel","Shovel remote not found") return end
-	local count = 0
-	pcall(function()
-		for _, obj in ipairs(workspace:GetDescendants()) do
-			if obj:IsA("Model") and obj:FindFirstChild("Plant") then
-				local plantName = obj.Name
-				-- Check if in shovel list (empty = all)
-				local shouldShovel = #shovelSettings.plantList == 0
-				if not shouldShovel then
-					for _, n in ipairs(shovelSettings.plantList) do
-						if plantName == n then shouldShovel = true break end
-					end
-				end
-				if shouldShovel then
-					ShovelRemote:FireServer("Remove", obj)
-					count += 1
-					task.wait(0.2)
-				end
-			end
-		end
-	end)
-	notify("Shovel", "Shoveled " .. count .. " plants")
-end
-
-local function autoShovelLoop()
-	while shovelSettings.isRunning do
-		shovelPlants()
-		task.wait(5)
-	end
-end
-
--- ============================================================
--- FAST EGG PLACEMENT
--- ============================================================
-local fastEggSettings = {
-	enabled      = false,
-	placingDelay = 0.1, -- reduced from default
-}
-
--- ============================================================
--- AUTO FAV AFTER HATCH
--- ============================================================
-local autoFavAfterHatch = false
-
--- Hook into pet added event to auto-fav new pets
-local function setupAutoFavHook()
-	local petContainer = workspace:FindFirstChild("PetsPhysical")
-	if not petContainer then return end
-	petContainer.ChildAdded:Connect(function(newPet)
-		if not autoFavAfterHatch then return end
-		task.wait(0.5) -- wait for pet data to load
-		-- Try to get UUID from pet object
-		local uuid = nil
-		pcall(function()
-			local uuidVal = newPet:FindFirstChild("UUID") or newPet:FindFirstChild("Id")
-			if uuidVal then uuid = uuidVal.Value end
-		end)
-		if uuid then
-			favoritePet(uuid, true)
-			notify("AutoFav", "Favorited new pet: " .. newPet.Name)
-		end
-	end)
-end
-pcall(setupAutoFavHook)
-
--- ============================================================
--- PET LEVEL BOOST SYSTEM
--- ============================================================
-local PetLevelRemote = nil
-pcall(function()
-	PetLevelRemote = GameEvents:FindFirstChild("PetLevelService")
-		or GameEvents:FindFirstChild("PetLevel_RE")
-		or GameEvents:FindFirstChild("LevelUpPet")
-end)
-
 local petLevelSettings = {
 	minLevel    = 0,
 	maxLevel    = 100,
 	autoLevel   = false,
-	selectedPets = {},
 }
-
-local function levelUpPet(uuid, targetLevel)
-	if not PetLevelRemote then notify("Level","Level remote not found") return end
-	pcall(function()
-		PetLevelRemote:FireServer("LevelUp", uuid, targetLevel or petLevelSettings.maxLevel)
-	end)
-	notify("Level", "Leveled up pet UUID: " .. tostring(uuid))
-end
-
-local function autoLevelLoop()
-	while petLevelSettings.autoLevel do
-		local ok, data = pcall(function()
-			return DataStream:InvokeServer("GetInventory")
-		end)
-		if ok and data then
-			local pets = (data.PetInventory and data.PetInventory.Data) or {}
-			for uuid, petData in pairs(pets) do
-				if not petLevelSettings.autoLevel then break end
-				local level = petData.Level or 0
-				if level < petLevelSettings.maxLevel then
-					levelUpPet(uuid, petLevelSettings.maxLevel)
-					task.wait(0.5)
-				end
-			end
-		end
-		task.wait(5)
-	end
-end
-
--- ============================================================
--- RECLAIMER SERVICE
--- ============================================================
-local ReclaimerRemote = nil
-pcall(function()
-	ReclaimerRemote = GameEvents:FindFirstChild("ReclaimerService_RE")
-		or GameEvents:FindFirstChild("Reclaimer")
-end)
 
 local reclaimerSettings = {
 	plantList   = {},
 	keepAmount  = 0,
 }
 
-local function runReclaimer()
-	if not ReclaimerRemote then notify("Reclaimer","Remote not found") return end
-	pcall(function()
-		ReclaimerRemote:FireServer("Reclaim", reclaimerSettings.plantList, reclaimerSettings.keepAmount)
-	end)
-	notify("Reclaimer", "Reclaimer fired")
-end
-
--- ============================================================
--- PET FEEDING SYSTEM
--- ============================================================
 local feedSettings = {
 	autoFeed      = false,
 	feedInterval  = 120,
-	feedFood      = false, -- use food items instead of fruits
+	feedFood      = false,
 	forceAll      = false,
 	petList       = {},
 }
 
-local function feedPets()
-	local count = 0
-	pcall(function()
-		-- Collect fruits from farm first
-		for _, obj in ipairs(workspace:GetDescendants()) do
-			if obj:IsA("Model") and obj:FindFirstChild("Crop") then
-				CollectEvent:FireServer(obj)
-				task.wait(0.05)
-			end
-		end
-		-- Feed pets using PetsService
-		PetsService:FireServer("FeedPets", feedSettings.petList, feedSettings.feedFood)
-		count += 1
-	end)
-	notify("Feed", "Fed pets")
-end
-
-local function autoFeedLoop()
-	while feedSettings.autoFeed do
-		feedPets()
-		task.wait(feedSettings.feedInterval)
-	end
-end
-
--- ============================================================
--- AUTO SELL BACKPACK (time-based)
--- ============================================================
 local autoSellBackpackSettings = {
 	enabled     = false,
 	intervalSec = 60,
 }
 
-local function autoSellBackpackLoop()
-	while autoSellBackpackSettings.enabled do
-		task.wait(autoSellBackpackSettings.intervalSec)
-		if autoSellBackpackSettings.enabled then
-			autoSellByFilter()
-		end
-	end
+local savedCFrames = {}
+
+-- ===== ALL 364 PETS =====
+local PET_LIST = {
+'Bagel Bunny','Black Bird','Bunny','Chipmunk','Crab','Crow','Dairy Cow','Dog','Gecko','Golden Lab','Ladybug','Oxpecker','Pumpkin Rat','Robin','Seagull','Sheckling','Snow Bunny','Starfish','Termite',
+'Angora Goat','Bacon Pig','Bat','Bee','Black Bunny','Blue Jay','Cardinal','Cat','Chicken','Clam','Deer','Elk','Farmer Chipmunk','French Hen','Goat','Hyena','Hyrax','Jackalope','Maneki-neko','New Year\'s Bird','Pink Bunny','Salmon','Scarab','Shiba Inu','Sunny-Side Chicken','Unicycle Monkey','Wasp',
+'Armadillo','Badger','Bone Dog','Cape Buffalo','Christmas Gorilla','Chubby Chipmunk','Easter Egg Chick','Firemite','Firework Sprite','Flamingo','Geode Turtle','Ghost Bear','Gift Rat','Goblin','Hedgehog','Honey Bee','Hummingbird','Kiwi','Kiwi (Pet)','Messenger Pigeon','Monkey','Nihonzaru','Orange Tabby','Orangutan','Pancake Mole','Partridge','Performer Seal','Pig','Pixie','Red Squirrel','Rooster','Sea Turtle','Seal','Smithing Dog','Snowman Soldier','Spotted Deer','Topaz Snail','Toucan','Tree Frog','Tsuchinoko','Turtle Dove','Woodpecker','Zebra',
+'Amethyst Beetle','Ash Raven','Bald Eagle','Bear on Bike','Blood Hedgehog','Calico','Capybara','Caterpillar','Celebration Puppy','Champion Beetle','Cheetah','Corrupted Kodama','Cow','Cuckoo','Emerald Snake','Football','Fortune Squirrel','Frog','German Shepherd','Giraffe','Gorilla Chef','Grey Mouse','Grizzly Bear','Gummy Bear','Hippo','Hotdog Daschund','Idol Chipmunk','Iguana','Iguanodon','Imp','Kodama','Magpie','Mallard','Mandrake','Mandrake (Pet)','Marmot','Marshmallow Lamb','Meerkat','Mole','Moon Cat','Moth','Ostrich','Pachycephalosaurus','Panda','Parasaurolophus','Peacock','Petal Bee','Pine Beetle','Pink Panda','Polar Bear','Raptor','Reindeer','Sand Snake','Scarlet Macaw','Sea Otter','Seedling','Shroomie','Silver Dragonfly','Silver Monkey','Silver Piggy','Snail','Snowman Builder','Specter','Spider','Stag Beetle','Stegosaurus','Stork','Sushi Bear','Tanchozuru','Tanuki','Tarantula Hawk','Tomb Marmot','Trapdoor Spider','Triceratops','Turtle','Wisp','Wolf','Woody',
+'Ankylosaurus','Apple Gazelle','Arctic Fox','Axolotl','Barn Owl','Bear Bee','Black Cat','Blood Kiwi','Brontosaurus','Brown Mouse','Brown Owl','Butterfly','Camel','Chicken Zombie','Chimpanzee','Cocoa Cat','Cooked Owl','Crocodile','Dark Spriggan','Dilophosaurus','Drake','Echo Frog','Eggnog Chick','Firefly','Galah Cockatoo','Giant Ant','Glimmering Sprite','Goblin Gardener','Goblin Miner','Golden Bee','Golden Piggy','Golem','Hamster','Hazehound','Hootsie Roll','Hyacinth Macaw','Junkbot','Kappa','Koi','Lemon Lion','Mantis Shrimp','Mimic Octopus','Mistletoad','Mochi Mouse','New Year\'s Chimp','Night Owl','Nutcracker','Owl','Pack Bee','Pack Mule','Peach Wasp','Penguin','Praying Mantis','Pterodactyl','Red Dragon','Red Giant Ant','Rhino','Sapphire Macaw','Show Pony','Spaghetti Sloth','Spriggan','Squirrel','Sugar Glider','Summer Kiwi',
+'Bearded Dragon','Blood Owl','Carnival Elephant','Cerberus','Chimera','Chinchilla','Cockatrice','Diamond Panther','Disco Bee','Dragonfly','Elephant','Fennec Fox','French Fry Ferret','Frost Dragon','Golden Goose','Green Bean','Griffin','Hex Serpent','Hydra','Krampus','Lich','Lion','Lobster Thermidor','Luminous Sprite','Mizuchi','Mummy','Orchid Mantis','Phoenix','Queen Bee','Raccoon','Raiju','Reaper','Red Fox','Red Panda','Red Rose Fox','Red-Nosed Reindeer','Ruby Squid','Space Squirrel','Spinosaurus','Star Wolf','Swan','T-Rex','Tiger','Water Buffalo','Wind Wyvern','Yeti',
+'Birb','Corrupted Kitsune','Gold Finch','Headless Horseman','Ice Golem','Kitsune','Kitsune (Pet)','New Year\'s Dragon','Gnome',
+'Beaver','Chocolate Bunny','Easter Bunny','Festive Frost Squirrel','Festive Ice Golem','Festive Moose','Festive Nutcracker','Festive Partridge','Festive Premium Christmas Egg','Festive Premium Winter Egg','Festive Reindeer','Festive Santa Bear','Festive Turtle Dove','Festive Wendigo','Festive Yeti','Frost Squirrel','Ghostly Bat','Ghostly Black Cat','Ghostly Bone Dog','Ghostly Headless Horseman','Ghostly Mummy','Ghostly Premium Spooky Egg','Ghostly Spider','GIANT Badger','GIANT Barn Owl','GIANT Grizzly Bear','GIANT Premium Fall Egg','GIANT Robin','GIANT Swan','Gilded Choc Chocolate Bunny','Gilded Choc Easter Bunny','Gilded Choc Easter Egg Chick','Gilded Choc Jerboa','Gilded Choc Marshmallow Lamb','Gilded Choc Nyala','Gilded Choc Peryton','Gilded Choc Spring Bee','Goblin?','Jerboa','Moose','Nyala','Peryton','Queen Bee (Pet)','Rainbow Ankylosaurus','Rainbow Bear on Bike','Rainbow Birb','Rainbow Black Bird','Rainbow Brown Owl','Rainbow Carnival Elephant','Rainbow Celebration Puppy','Rainbow Cuckoo','Rainbow Dilophosaurus','Rainbow Elephant','Rainbow Firework Sprite','Rainbow Giraffe','Rainbow Gold Finch','Rainbow Iguanodon','Rainbow New Year\'s Bird','Rainbow New Year\'s Chimp','Rainbow New Year\'s Dragon','Rainbow Oxpecker','Rainbow Pachycephalosaurus','Rainbow Parasaurolophus','Rainbow Performer Seal','Rainbow Premium Bird Egg','Rainbow Premium Carnival Egg','Rainbow Premium New Year\'s Egg','Rainbow Premium Primal Egg','Rainbow Premium Safari Egg','Rainbow Rhino','Rainbow Show Pony','Rainbow Spinosaurus','Rainbow Star Wolf','Rainbow Unicycle Monkey','Rainbow Zebra','Santa Bear','Spring Bee','Wendigo'
+}
+
+local PET_SET = {}
+for _, n in ipairs(PET_LIST) do PET_SET[n] = true end
+
+local EGG_LIST = {
+'Common Egg','Uncommon Egg','Rare Egg','Bird Egg','Carnival Egg','New Year\'s Egg',
+'Winter Egg','Christmas Egg','Gem Egg','Safari Egg','Spooky Egg','Jungle Egg',
+'Fall Egg','Common Summer Egg','Rare Summer Egg','Mythical Egg','Legendary Egg',
+'Enchanted Egg','Paradise Egg','Bug Egg','Zen Egg','Primal Egg','Dinosaur Egg',
+'Sprout Egg','Bee Egg','Anti Bee Egg','Oasis Egg','Gourmet Egg','Night Egg',
+'Premium Bird Egg','Premium Carnival Egg','Premium New Year\'s Egg','Premium Winter Egg',
+'Premium Christmas Egg','Premium Primal Egg','Premium Anti Bee Egg','Premium Oasis Egg',
+'Rainbow Premium Bird Egg','Rainbow Premium Carnival Egg','Rainbow Premium New Year\'s Egg',
+'Rainbow Premium Primal Egg','Rainbow Premium Safari Egg','Exotic Bug Egg',
+'Festive Premium Christmas Egg','Festive Premium Winter Egg',
+}
+
+local SEED_LIST = {
+'Carrot','Strawberry','Blueberry','Orange Tulip','Tomato','Corn','Daffodil',
+'Watermelon','Pumpkin','Apple','Bamboo','Coconut','Cactus','Dragon Fruit',
+'Mango','Grape','Mushroom','Pepper','Sunflower','Beanstalk','Wheat','Potato',
+'Onion','Garlic','Ginger','Lavender','Rose','Lily','Daisy',
+}
+
+-- ===== HELPERS =====
+local function notify(title, msg)
+if not settings.notifications then return end
+print('[RivetHub2] ' .. title .. ': ' .. tostring(msg))
 end
 
--- ============================================================
--- DISCONNECT REJOIN WATCHER
--- ============================================================
+local function safeFireServer(remote, ...)
+if not remote then return false end
+local ok, err = pcall(function() remote:FireServer(...) end)
+return ok
+end
+
+local function safeInvokeServer(remote, ...)
+if not remote then return false, nil end
+local ok, result = pcall(function() return remote:InvokeServer(...) end)
+return ok, result
+end
+
+local function getPrice(obj)
+for _, name in ipairs({'Price','Cost','TokenPrice','Tokens','BuyPrice','Value'}) do
+local v = obj:FindFirstChild(name)
+if v and (v:IsA('NumberValue') or v:IsA('IntValue')) and v.Value > 0 then
+return v.Value
+end
+end
+for _, child in ipairs(obj:GetChildren()) do
+for _, name in ipairs({'Price','Cost','TokenPrice'}) do
+local v = child:FindFirstChild(name)
+if v and (v:IsA('NumberValue') or v:IsA('IntValue')) and v.Value > 0 then
+return v.Value
+end
+end
+end
+return 0
+end
+
+local function getKG(obj)
+for _, name in ipairs({'KG','Kg','kg','Weight','Mass'}) do
+local v = obj:FindFirstChild(name)
+if v and (v:IsA('NumberValue') or v:IsA('IntValue')) then
+return v.Value
+end
+end
+return 0
+end
+
+local function teleportTo(obj)
+local char = player.Character
+if not char then return end
+local root = char:FindFirstChild('HumanoidRootPart')
+if not root then return end
+pcall(function()
+if obj:IsA('BasePart') then
+root.CFrame = obj.CFrame + Vector3.new(0, 5, 0)
+elseif obj:IsA('Model') and obj.PrimaryPart then
+root.CFrame = obj.PrimaryPart.CFrame + Vector3.new(0, 5, 0)
+end
+end)
+end
+
+local function getActivePlayers()
+local list = {}
+for _, p in ipairs(Players:GetPlayers()) do
+if p ~= player then table.insert(list, p.Name) end
+end
+return list
+end
+﻿-- ===== SCAN BOOTHS =====
+local function scanBooths()
+boothsData     = {}
+stats.totalScans += 1
+local petsToScan = #scanPets > 0 and scanPets or PET_LIST
+local scanSet    = {}
+for _, n in ipairs(petsToScan) do scanSet[n] = true end
+local found = 0
+local seen  = {}
+local descendants = workspace:GetDescendants()
+for i = 1, #descendants, 50 do
+for j = i, math.min(i + 49, #descendants) do
+local obj = descendants[j]
+if obj and not seen[obj] and scanSet[obj.Name] then
+seen[obj] = true
+local price = getPrice(obj)
+local kg    = getKG(obj)
+local passKG = (kg == 0) or (kg >= settings.minKG and kg <= settings.maxKG)
+if price <= settings.maxPrice and passKG then
+found += 1
+local boothName = "Unknown"
+local anc = obj.Parent
+for _ = 1, 4 do
+if anc and anc ~= workspace then
+boothName = anc.Name
+anc = anc.Parent
+else break end
+end
+table.insert(boothsData, {
+Name   = obj.Name,
+Booth  = boothName,
+Price  = price,
+KG     = kg,
+Object = obj,
+})
+end
+end
+end
+task.wait()
+end
+notify("Scan", found .. " pets found in budget")
+return found
+end
+
+-- ===== SNIPE LOOP =====
+local function snipeLoop()
+while isAutoSniping do
+if #selectedPets == 0 then task.wait(1) continue end
+scanBooths()
+for _, booth in ipairs(boothsData) do
+if not isAutoSniping then break end
+for _, want in ipairs(selectedPets) do
+if booth.Name == want then
+stats.sniped      += 1
+stats.tokensSpent += booth.Price
+table.insert(stats.history, {
+pet   = booth.Name,
+price = booth.Price,
+booth = booth.Booth,
+kg    = booth.KG,
+time  = os.date("%H:%M:%S"),
+})
+if #stats.history > 50 then table.remove(stats.history, 1) end
+notify("SNIPED", booth.Name .. " | " .. booth.Price .. "t | " .. booth.KG .. "kg")
+if settings.autoTeleport and booth.Object then
+teleportTo(booth.Object)
+end
+if settings.autoRejoin then
+task.wait(2)
+pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
+end
+break
+end
+end
+end
+task.wait(math.max(0.1, 1 / settings.snipeSpeed))
+end
+end
+
+local function autoScanLoop()
+while isAutoScanning do
+scanBooths()
+task.wait(5)
+end
+end
+
+-- ===== PET TOOLS =====
+local function sellPetByUUID(uuid)
+if not uuid or uuid == "" then return end
+safeFireServer(SellPetShopSelected, uuid)
+stats.sold += 1
+notify("Sell", "Sold UUID: " .. uuid)
+end
+
+local function favoritePet(uuid, state)
+if not uuid or uuid == "" then return end
+safeFireServer(FavItem, uuid, state)
+notify("Fav", (state and "Favorited" or "Unfavorited") .. ": " .. uuid)
+end
+
+local function sellAllUnfavorited()
+safeFireServer(SellAllPets_RE)
+notify("Sell", "Fired SellAllPets remote")
+end
+
+local function autoSellByFilter()
+local ok, data = safeInvokeServer(DataStream, "GetInventory")
+if not ok or not data then
+notify("Sell", "Could not get inventory")
+return
+end
+local pets = (data.PetInventory and data.PetInventory.Data) or {}
+local count = 0
+for uuid, petData in pairs(pets) do
+if petData then
+local weight = petData.Weight or petData.Size or 0
+local age    = petData.Age or 0
+local fav    = petData.Favorited or false
+local sell   = false
+if settings.sellWeight > 0 and weight > settings.sellWeight then sell = true end
+if settings.sellAge > 0 and age > settings.sellAge then sell = true end
+if fav and not settings.sellOverrideFav then sell = false end
+if sell then
+sellPetByUUID(uuid)
+count += 1
+task.wait(0.15)
+end
+end
+end
+notify("AutoSell", "Sold " .. count .. " pets")
+end
+
+-- ===== AUTO HATCH =====
+local function hatchEgg(eggName)
+local backpack = player:FindFirstChild("Backpack")
+if not backpack then return false end
+local egg = backpack:FindFirstChild(eggName)
+or (player.Character and player.Character:FindFirstChild(eggName))
+if not egg then return false end
+local ok = pcall(function()
+if PetEggService then
+PetEggService:FireServer("PlaceEgg", egg)
+task.wait(0.3)
+PetEggService:FireServer("HatchEgg", egg)
+end
+end)
+if ok then
+stats.hatched += 1
+notify("Hatch", "Hatched: " .. eggName)
+end
+return ok
+end
+
+local function autoHatchLoop()
+while isAutoHatching do
+if #selectedEggs == 0 then task.wait(1) continue end
+for _, egg in ipairs(selectedEggs) do
+if not isAutoHatching then break end
+hatchEgg(egg)
+task.wait(0.5)
+end
+task.wait(1)
+end
+end
+
+-- ===== FARM - COLLECT =====
+local function collectCrops()
+local count = 0
+pcall(function()
+for _, obj in ipairs(workspace:GetDescendants()) do
+if obj:IsA("Model") and obj:FindFirstChild("Crop") then
+safeFireServer(CollectEvent, obj)
+count += 1
+task.wait(0.1)
+end
+end
+end)
+stats.collected += count
+notify("Collect", "Collected " .. count .. " crops")
+end
+
+-- ===== FARM - WATER =====
+local function waterPlants()
+local count = 0
+pcall(function()
+for _, obj in ipairs(workspace:GetDescendants()) do
+if obj:IsA("Model") and (obj:FindFirstChild("Plant") or obj:FindFirstChild("Seed")) then
+safeFireServer(Water_RE, obj, settings.waterAmount)
+count += 1
+task.wait(0.3)
+end
+end
+end)
+notify("Water", "Watered " .. count .. " plants")
+end
+
+local function autoWaterLoop()
+while isAutoWatering do
+waterPlants()
+task.wait(settings.waterInterval)
+end
+end
+
+-- ===== FARM - PLANT SEEDS =====
+local function plantSeeds()
+if #selectedSeeds == 0 then notify("Plant","No seeds selected") return end
+local backpack = player:FindFirstChild("Backpack")
+if not backpack then return end
+local plots = {}
+for _, obj in ipairs(workspace:GetDescendants()) do
+if (obj.Name == "Plot" or obj.Name == "FarmPlot" or obj.Name == "GardenPlot")
+and (obj:IsA("Model") or obj:IsA("BasePart"))
+and not obj:FindFirstChild("Plant")
+and not obj:FindFirstChild("Seed") then
+table.insert(plots, obj)
+end
+end
+local planted = 0
+for _, seedName in ipairs(selectedSeeds) do
+local seed = backpack:FindFirstChild(seedName)
+if seed and #plots > 0 then
+local plot = table.remove(plots, 1)
+safeFireServer(PlantRemote, seed, plot)
+planted += 1
+stats.planted += 1
+task.wait(0.3)
+end
+end
+notify("Plant", "Planted " .. planted .. " seeds")
+end
+
+local function autoPlantLoop()
+while isAutoPlanting do
+plantSeeds()
+task.wait(10)
+end
+end
+
+-- ===== SPRINKLER =====
+local function placeSprinkler()
+local backpack = player:FindFirstChild("Backpack")
+if not backpack then return end
+local sprinkler = backpack:FindFirstChild("Grandmaster Sprinkler")
+or backpack:FindFirstChild("Godly Sprinkler")
+or backpack:FindFirstChild("Master Sprinkler")
+or backpack:FindFirstChild("Sprinkler")
+if not sprinkler then notify("Sprinkler","No sprinkler in backpack") return end
+safeFireServer(SprinklerService, "Place", sprinkler)
+notify("Sprinkler", "Placed: " .. sprinkler.Name)
+end
+
+local function removeAllSprinklers()
+safeFireServer(SprinklerService, "RemoveAll")
+notify("Sprinkler", "Removed all sprinklers")
+end
+
+local function autoSprinklerLoop()
+while isAutoSprinkler do
+placeSprinkler()
+task.wait(60)
+end
+end
+
+-- ===== COOKING =====
+local function startCooking()
+local hasItem = false
+for _, v in ipairs(cookingItems) do if v ~= "" then hasItem = true break end end
+if not hasItem then notify("Cook","Set ingredients first") return end
+safeFireServer(CookingPotService, "StartCooking",
+cookingItems[1], cookingItems[2], cookingItems[3],
+cookingItems[4], cookingItems[5])
+notify("Cook", "Started cooking")
+end
+
+local function collectCooking()
+safeFireServer(CookingPotService, "Collect")
+notify("Cook", "Collected cooked items")
+end
+
+local function autoCookLoop()
+while isAutoCooking do
+startCooking()
+task.wait(30)
+collectCooking()
+task.wait(2)
+end
+end
+
+-- ===== MUTATION MACHINE =====
+local function submitMutation(uuid)
+if not uuid or uuid == "" then return end
+safeFireServer(MutationService, "Submit", uuid)
+notify("Mutation", "Submitted pet to machine")
+end
+
+local function collectMutation()
+safeFireServer(MutationService, "Collect")
+notify("Mutation", "Collected from machine")
+end
+
+-- ===== PET BOOST =====
+local function boostPet(uuid, item)
+if not uuid or uuid == "" then return end
+safeFireServer(BoostService, "ApplyBoost", uuid, item)
+notify("Boost", "Applied " .. tostring(item) .. " to pet")
+end
+
+-- ===== BONFIRE =====
+local function useBonfire()
+safeFireServer(BonfireService, "Use")
+notify("Bonfire", "Used bonfire")
+end
+
+-- ===== SHOPS =====
+local function buyFromSeedShop(item, amount)
+safeFireServer(BuySeedStock, item, amount or 1)
+notify("Shop", "Bought " .. (amount or 1) .. "x " .. item)
+end
+
+local function buyFromGearShop(item, amount)
+safeFireServer(BuyGearStock, item, amount or 1)
+notify("Shop", "Bought " .. (amount or 1) .. "x " .. item)
+end
+
+local function buyEgg(eggName, amount)
+safeFireServer(BuyPetEgg, eggName, amount or 1)
+notify("Shop", "Bought " .. (amount or 1) .. "x " .. eggName)
+end
+
+local function buyFromEventShop(item, amount)
+safeFireServer(BuyEventShopStock, item, amount or 1)
+notify("Shop", "Bought " .. (amount or 1) .. "x " .. item)
+end
+
+local function buyFromTravelingMerchant(item, amount)
+safeFireServer(BuyTravelingMerchant, item, amount or 1)
+notify("Shop", "Bought " .. (amount or 1) .. "x " .. item .. " from merchant")
+end
+
+-- ===== ANTI-IDLE =====
+local function disableIdle()
+pcall(function()
+local connections = getconnections or get_signal_cons
+if connections then
+for _, v in pairs(connections(player.Idled)) do
+if v.Disable then v:Disable()
+elseif v.Disconnect then v:Disconnect() end
+end
+end
+end)
+notify("Anti-Idle", "Idle detection disabled")
+end
+pcall(disableIdle)
+
+-- ===== AUTO REJOIN =====
+local function rejoinGame()
+notify("Rejoin", "Rejoining in 3 seconds...")
+task.wait(3)
+pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
+end
+
+-- ===== REMOVE WEATHER =====
+local function removeWeather()
+pcall(function()
+local lighting = game:GetService("Lighting")
+lighting.GlobalShadows = false
+lighting.FogEnd = 100000
+lighting.FogStart = 100000
+for _, obj in ipairs(lighting:GetChildren()) do
+if obj:IsA("Atmosphere") or obj:IsA("Sky") or obj:IsA("BloomEffect")
+or obj:IsA("DepthOfFieldEffect") or obj:IsA("SunRaysEffect") then
+obj.Enabled = false
+end
+end
+for _, obj in ipairs(workspace:GetDescendants()) do
+if obj:IsA("ParticleEmitter") and (
+obj.Name:lower():find("rain") or obj.Name:lower():find("snow")
+or obj.Name:lower():find("weather") or obj.Name:lower():find("fog")
+) then
+obj.Enabled = false
+end
+end
+end)
+notify("Weather", "Weather visuals removed")
+end
+
+-- ===== ASCENSION =====
+local function doAscension()
+if not AscensionRemote then
+notify("Ascension", "Ascension remote not found")
+return
+end
+safeFireServer(AscensionRemote, "Ascend", ascensionSettings.maxSeeds)
+notify("Ascension", "Ascension fired!")
+end
+
+local function autoAscensionLoop()
+while ascensionSettings.autoAscend do
+doAscension()
+task.wait(10)
+end
+end
+
+-- ===== SHOVEL =====
+local function shovelPlants()
+if not ShovelRemote then notify("Shovel","Shovel remote not found") return end
+local count = 0
+pcall(function()
+for _, obj in ipairs(workspace:GetDescendants()) do
+if obj:IsA("Model") and obj:FindFirstChild("Plant") then
+local plantName = obj.Name
+local shouldShovel = #shovelSettings.plantList == 0
+if not shouldShovel then
+for _, n in ipairs(shovelSettings.plantList) do
+if plantName == n then shouldShovel = true break end
+end
+end
+if shouldShovel then
+safeFireServer(ShovelRemote, "Remove", obj)
+count += 1
+task.wait(0.2)
+end
+end
+end
+end)
+notify("Shovel", "Shoveled " .. count .. " plants")
+end
+
+local function autoShovelLoop()
+while shovelSettings.isRunning do
+shovelPlants()
+task.wait(5)
+end
+end
+
+-- ===== AUTO FAV AFTER HATCH =====
+local function setupAutoFavHook()
+local petContainer = workspace:FindFirstChild("PetsPhysical")
+if not petContainer then return end
+petContainer.ChildAdded:Connect(function(newPet)
+if not autoFavAfterHatch then return end
+task.wait(0.5)
+local uuid = nil
+pcall(function()
+local uuidVal = newPet:FindFirstChild("UUID") or newPet:FindFirstChild("Id")
+if uuidVal then uuid = uuidVal.Value end
+end)
+if uuid then
+favoritePet(uuid, true)
+notify("AutoFav", "Favorited new pet: " .. newPet.Name)
+end
+end)
+end
+pcall(setupAutoFavHook)
+
+-- ===== PET LEVEL =====
+local function levelUpPet(uuid, targetLevel)
+if not PetLevelRemote then notify("Level","Level remote not found") return end
+safeFireServer(PetLevelRemote, "LevelUp", uuid, targetLevel or petLevelSettings.maxLevel)
+notify("Level", "Leveled up pet UUID: " .. tostring(uuid))
+end
+
+local function autoLevelLoop()
+while petLevelSettings.autoLevel do
+local ok, data = safeInvokeServer(DataStream, "GetInventory")
+if ok and data then
+local pets = (data.PetInventory and data.PetInventory.Data) or {}
+for uuid, petData in pairs(pets) do
+if not petLevelSettings.autoLevel then break end
+local level = petData.Level or 0
+if level < petLevelSettings.maxLevel then
+levelUpPet(uuid, petLevelSettings.maxLevel)
+task.wait(0.5)
+end
+end
+end
+task.wait(5)
+end
+end
+
+-- ===== RECLAIMER =====
+local function runReclaimer()
+if not ReclaimerRemote then notify("Reclaimer","Remote not found") return end
+safeFireServer(ReclaimerRemote, "Reclaim", reclaimerSettings.plantList, reclaimerSettings.keepAmount)
+notify("Reclaimer", "Reclaimer fired")
+end
+
+-- ===== PET FEEDING =====
+local function feedPets()
+pcall(function()
+for _, obj in ipairs(workspace:GetDescendants()) do
+if obj:IsA("Model") and obj:FindFirstChild("Crop") then
+safeFireServer(CollectEvent, obj)
+task.wait(0.05)
+end
+end
+safeFireServer(PetsService, "FeedPets", feedSettings.petList, feedSettings.feedFood)
+end)
+notify("Feed", "Fed pets")
+end
+
+local function autoFeedLoop()
+while feedSettings.autoFeed do
+feedPets()
+task.wait(feedSettings.feedInterval)
+end
+end
+
+-- ===== AUTO SELL BACKPACK =====
+local function autoSellBackpackLoop()
+while autoSellBackpackSettings.enabled do
+task.wait(autoSellBackpackSettings.intervalSec)
+if autoSellBackpackSettings.enabled then
+autoSellByFilter()
+end
+end
+end
+
+-- ===== DISCONNECT REJOIN =====
 local function setupDisconnectRejoin()
-	game.Players.PlayerRemoving:Connect(function(p)
-		if p == player and isAutoRejoinDC then
-			task.wait(3)
-			pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
-		end
-	end)
+game.Players.PlayerRemoving:Connect(function(p)
+if p == player and isAutoRejoinDC then
+task.wait(3)
+pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
+end
+end)
 end
 pcall(setupDisconnectRejoin)
 
--- ============================================================
--- HIGH PERFORMANCE MODE
--- ============================================================
+-- ===== HIGH PERFORMANCE =====
 local function enableHighPerformance()
-	pcall(function()
-		local settings = game:GetService("UserGameSettings")
-		settings.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
-	end)
-	pcall(function()
-		game:GetService("Lighting").GlobalShadows = false
-	end)
-	pcall(function()
-		for _, obj in ipairs(workspace:GetDescendants()) do
-			if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") then
-				obj.Enabled = false
-			end
-		end
-	end)
-	notify("Performance", "High performance mode enabled")
+pcall(function()
+local gs = game:GetService("UserGameSettings")
+gs.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
+end)
+pcall(function()
+game:GetService("Lighting").GlobalShadows = false
+end)
+pcall(function()
+for _, obj in ipairs(workspace:GetDescendants()) do
+if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") then
+obj.Enabled = false
+end
+end
+end)
+notify("Performance", "High performance mode enabled")
 end
 
--- ============================================================
--- CUSTOM CFRAME SAVE/LOAD
--- ============================================================
-local savedCFrames = {}
-
+-- ===== CFRAME SAVE/LOAD =====
 local function saveCFrame(name)
-	local char = player.Character
-	if not char then return end
-	local root = char:FindFirstChild("HumanoidRootPart")
-	if not root then return end
-	savedCFrames[name] = root.CFrame
-	notify("CFrame", "Saved position: " .. name)
+local char = player.Character
+if not char then return end
+local root = char:FindFirstChild("HumanoidRootPart")
+if not root then return end
+savedCFrames[name] = root.CFrame
+notify("CFrame", "Saved position: " .. name)
 end
 
 local function loadCFrame(name)
-	local cf = savedCFrames[name]
-	if not cf then notify("CFrame","No saved position: "..name) return end
-	local char = player.Character
-	if not char then return end
-	local root = char:FindFirstChild("HumanoidRootPart")
-	if root then
-		root.CFrame = cf
-		notify("CFrame", "Teleported to: " .. name)
-	end
+local cf = savedCFrames[name]
+if not cf then notify("CFrame","No saved position: "..name) return end
+local char = player.Character
+if not char then return end
+local root = char:FindFirstChild("HumanoidRootPart")
+if root then
+root.CFrame = cf
+notify("CFrame", "Teleported to: " .. name)
+end
 end
 
--- ============================================================
--- BETTER FRUIT NAMES (display formatting)
--- ============================================================
-local showBetterFruitNames = false
-
-local function formatFruitName(name)
-	if not showBetterFruitNames then return name end
-	-- Remove common suffixes and clean up names
-	name = name:gsub("%(Fruit%)", ""):gsub("%(Plant%)", ""):gsub("  ", " ")
-	return name:match("^%s*(.-)%s*$") -- trim
-end
-
--- ============================================================
--- SELL MODE - HATCH SELECTED
--- ============================================================
-local sellModeHatchSelected = false
-
+-- ===== SELL HATCHED PETS =====
 local function sellHatchedPets()
-	-- Sells only pets that were hatched this session
-	local ok, data = pcall(function()
-		return DataStream:InvokeServer("GetInventory")
-	end)
-	if not ok or not data then return end
-	local pets = (data.PetInventory and data.PetInventory.Data) or {}
-	local count = 0
-	for uuid, petData in pairs(pets) do
-		if petData and petData.IsNew then -- newly hatched flag
-			sellPetByUUID(uuid)
-			count += 1
-			task.wait(0.15)
-		end
-	end
-	notify("SellHatched", "Sold " .. count .. " hatched pets")
+local ok, data = safeInvokeServer(DataStream, "GetInventory")
+if not ok or not data then return end
+local pets = (data.PetInventory and data.PetInventory.Data) or {}
+local count = 0
+for uuid, petData in pairs(pets) do
+if petData and petData.IsNew then
+sellPetByUUID(uuid)
+count += 1
+task.wait(0.15)
+end
+end
+notify("SellHatched", "Sold " .. count .. " hatched pets")
 end
 
+-- ===== GIFT & TRADE SYSTEM =====
+local function sendGift(targetPlayer)
+if not GiftService then notify("Gift","Gift remote not found") return end
+local ok, data = safeInvokeServer(DataStream, "GetInventory")
+if not ok or not data then notify("Gift","Could not get inventory") return end
+local pets = (data.PetInventory and data.PetInventory.Data) or {}
+local count = 0
+for uuid, petData in pairs(pets) do
+if petData then
+local weight = petData.Weight or petData.Size or 0
+local age    = petData.Age or 0
+local fav    = petData.Favorited or false
+local petName = petData.Name or ""
+if fav and not giftSettings.allowFav then continue end
+if age < giftSettings.minAge or age > giftSettings.maxAge then continue end
+if weight < giftSettings.minWeight or weight > giftSettings.maxWeight then continue end
+if #giftSettings.allowPetList > 0 then
+local allowed = false
+for _, n in ipairs(giftSettings.allowPetList) do
+if petName == n then allowed = true break end
+end
+if not allowed then continue end
+end
+if giftSettings.customMode then
+local inList = false
+for _, u in ipairs(giftSettings.customPetUUIDs) do
+if u == uuid then inList = true break end
+end
+if not inList then continue end
+end
+safeFireServer(GiftService, "Gift", uuid, targetPlayer.UserId)
+count += 1
+task.wait(giftSettings.delayBetweenGift)
+end
+end
+notify("Gift", "Gifted " .. count .. " pets to " .. targetPlayer.Name)
+end
 
+local function autoGiftLoop()
+while isGiftRunning do
+for _, name in ipairs(giftSettings.playerTargets) do
+if not isGiftRunning then break end
+local tp = Players:FindFirstChild(name)
+if tp then
+sendGift(tp)
+else
+notify("Gift","Player not found: "..name)
+end
+task.wait(giftSettings.delayBetweenGift)
+end
+task.wait(5)
+end
+end
+
+local function isTradeActive()
+local tradeGui = player.PlayerGui:FindFirstChild("TradeGui")
+or player.PlayerGui:FindFirstChild("Trade")
+return tradeGui ~= nil and tradeGui.Enabled
+end
+
+local function isOtherPlayerReady()
+local tradeGui = player.PlayerGui:FindFirstChild("TradeGui")
+or player.PlayerGui:FindFirstChild("Trade")
+if not tradeGui then return false end
+local readyLabel = tradeGui:FindFirstChild("OtherReady", true)
+return readyLabel and readyLabel.Text == "Ready"
+end
+
+local function clickTradeAccept()
+local tradeGui = player.PlayerGui:FindFirstChild("TradeGui")
+or player.PlayerGui:FindFirstChild("Trade")
+if not tradeGui then return end
+local acceptBtn = tradeGui:FindFirstChild("Accept", true)
+or tradeGui:FindFirstChild("AcceptButton", true)
+if acceptBtn and acceptBtn:IsA("TextButton") then
+pcall(function() acceptBtn.MouseButton1Click:Fire() end)
+notify("Trade","Accepted trade")
+end
+end
+
+local function addPetToTrade(uuid)
+if not TradeService then notify("Trade","Trade remote not found") return end
+safeFireServer(TradeService, "AddPet", uuid)
+notify("Trade","Added pet to trade: "..uuid)
+end
+
+local function autoTradeWatcher()
+while isTradeWatcher do
+if isTradeActive() and isOtherPlayerReady() then
+clickTradeAccept()
+end
+task.wait(1)
+end
+end
+﻿-- ============================================================
+-- CUSTOM GUI ENGINE (Obsidian-style, pure Roblox Instances)
 -- ============================================================
--- CUSTOM GUI ENGINE (Obsidian-style, no external library)
--- ============================================================
-local playerGui = player:WaitForChild("PlayerGui")
+local playerGui = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui")
 
 -- ===== THEME =====
 local THEME = {
-	BG          = Color3.fromRGB(15, 15, 20),
-	SIDEBAR     = Color3.fromRGB(20, 20, 28),
-	TAB_ACTIVE  = Color3.fromRGB(99, 102, 241),
-	TAB_HOVER   = Color3.fromRGB(40, 40, 55),
-	TAB_IDLE    = Color3.fromRGB(20, 20, 28),
-	SECTION     = Color3.fromRGB(28, 28, 38),
-	ELEMENT     = Color3.fromRGB(35, 35, 48),
-	ELEMENT_HOV = Color3.fromRGB(45, 45, 62),
-	ACCENT      = Color3.fromRGB(99, 102, 241),
-	ACCENT2     = Color3.fromRGB(139, 92, 246),
-	TEXT        = Color3.fromRGB(240, 240, 255),
-	TEXT_DIM    = Color3.fromRGB(140, 140, 165),
-	TOGGLE_ON   = Color3.fromRGB(99, 102, 241),
-	TOGGLE_OFF  = Color3.fromRGB(55, 55, 70),
-	INPUT_BG    = Color3.fromRGB(22, 22, 32),
-	BORDER      = Color3.fromRGB(50, 50, 70),
-	CLOSE       = Color3.fromRGB(239, 68, 68),
-	TITLE_BAR   = Color3.fromRGB(18, 18, 26),
+BG          = Color3.fromRGB(15, 15, 20),
+SIDEBAR     = Color3.fromRGB(20, 20, 28),
+TAB_ACTIVE  = Color3.fromRGB(99, 102, 241),
+TAB_HOVER   = Color3.fromRGB(40, 40, 55),
+TAB_IDLE    = Color3.fromRGB(20, 20, 28),
+SECTION     = Color3.fromRGB(28, 28, 38),
+ELEMENT     = Color3.fromRGB(35, 35, 48),
+ELEMENT_HOV = Color3.fromRGB(45, 45, 62),
+ACCENT      = Color3.fromRGB(99, 102, 241),
+ACCENT2     = Color3.fromRGB(139, 92, 246),
+TEXT        = Color3.fromRGB(240, 240, 255),
+TEXT_DIM    = Color3.fromRGB(140, 140, 165),
+TOGGLE_ON   = Color3.fromRGB(99, 102, 241),
+TOGGLE_OFF  = Color3.fromRGB(55, 55, 70),
+INPUT_BG    = Color3.fromRGB(22, 22, 32),
+BORDER      = Color3.fromRGB(50, 50, 70),
+CLOSE       = Color3.fromRGB(239, 68, 68),
+TITLE_BAR   = Color3.fromRGB(18, 18, 26),
 }
 
 local FONT      = Enum.Font.GothamMedium
@@ -952,627 +995,620 @@ local FONT_SEMI = Enum.Font.Gotham
 
 -- ===== UTILITY =====
 local function make(class, props, parent)
-	local obj = Instance.new(class)
-	for k, v in pairs(props) do obj[k] = v end
-	if parent then obj.Parent = parent end
-	return obj
+local obj = Instance.new(class)
+for k, v in pairs(props) do obj[k] = v end
+if parent then obj.Parent = parent end
+return obj
 end
 
 local function corner(r, parent)
-	return make("UICorner", { CornerRadius = UDim.new(0, r) }, parent)
+return make("UICorner", { CornerRadius = UDim.new(0, r) }, parent)
 end
 
 local function stroke(color, thickness, parent)
-	return make("UIStroke", { Color = color, Thickness = thickness }, parent)
+return make("UIStroke", { Color = color, Thickness = thickness }, parent)
 end
 
 local function padding(t, b, l, r, parent)
-	return make("UIPadding", {
-		PaddingTop    = UDim.new(0, t),
-		PaddingBottom = UDim.new(0, b),
-		PaddingLeft   = UDim.new(0, l),
-		PaddingRight  = UDim.new(0, r),
-	}, parent)
+return make("UIPadding", {
+PaddingTop    = UDim.new(0, t),
+PaddingBottom = UDim.new(0, b),
+PaddingLeft   = UDim.new(0, l),
+PaddingRight  = UDim.new(0, r),
+}, parent)
 end
 
 local function tween(obj, props, t)
-	game:GetService("TweenService"):Create(obj,
-		TweenInfo.new(t or 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-		props
-	):Play()
+TweenService:Create(obj,
+TweenInfo.new(t or 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+props
+):Play()
 end
 
 -- ===== SCREEN GUI =====
 local ScreenGui = make("ScreenGui", {
-	Name            = "RivetHub2",
-	ResetOnSpawn    = false,
-	ZIndexBehavior  = Enum.ZIndexBehavior.Sibling,
-	DisplayOrder    = 999,
+Name            = "RivetHub2",
+ResetOnSpawn    = false,
+ZIndexBehavior  = Enum.ZIndexBehavior.Sibling,
+DisplayOrder    = 999,
 }, playerGui)
 
 -- ===== MAIN WINDOW =====
 local MainFrame = make("Frame", {
-	Name              = "MainFrame",
-	Size              = UDim2.new(0, 620, 0, 520),
-	Position          = UDim2.new(0.5, -310, 0.5, -260),
-	BackgroundColor3  = THEME.BG,
-	BorderSizePixel   = 0,
-	ClipsDescendants  = true,
+Name              = "MainFrame",
+Size              = UDim2.new(0, 620, 0, 520),
+Position          = UDim2.new(0.5, -310, 0.5, -260),
+BackgroundColor3  = THEME.BG,
+BorderSizePixel   = 0,
+ClipsDescendants  = true,
 }, ScreenGui)
 corner(10, MainFrame)
 stroke(THEME.BORDER, 1, MainFrame)
 
 -- Drop shadow
-local Shadow = make("ImageLabel", {
-	Name              = "Shadow",
-	Size              = UDim2.new(1, 30, 1, 30),
-	Position          = UDim2.new(0, -15, 0, -15),
-	BackgroundTransparency = 1,
-	Image             = "rbxassetid://6014261993",
-	ImageColor3       = Color3.fromRGB(0, 0, 0),
-	ImageTransparency = 0.5,
-	ScaleType         = Enum.ScaleType.Slice,
-	SliceCenter       = Rect.new(49, 49, 450, 450),
-	ZIndex            = 0,
+make("ImageLabel", {
+Name              = "Shadow",
+Size              = UDim2.new(1, 30, 1, 30),
+Position          = UDim2.new(0, -15, 0, -15),
+BackgroundTransparency = 1,
+Image             = "rbxassetid://6014261993",
+ImageColor3       = Color3.fromRGB(0, 0, 0),
+ImageTransparency = 0.5,
+ScaleType         = Enum.ScaleType.Slice,
+SliceCenter       = Rect.new(49, 49, 450, 450),
+ZIndex            = 0,
 }, MainFrame)
 
 -- ===== TITLE BAR =====
 local TitleBar = make("Frame", {
-	Name             = "TitleBar",
-	Size             = UDim2.new(1, 0, 0, 42),
-	BackgroundColor3 = THEME.TITLE_BAR,
-	BorderSizePixel  = 0,
+Name             = "TitleBar",
+Size             = UDim2.new(1, 0, 0, 42),
+BackgroundColor3 = THEME.TITLE_BAR,
+BorderSizePixel  = 0,
 }, MainFrame)
 
--- Accent line under title
 make("Frame", {
-	Size             = UDim2.new(1, 0, 0, 1),
-	Position         = UDim2.new(0, 0, 1, -1),
-	BackgroundColor3 = THEME.ACCENT,
-	BorderSizePixel  = 0,
+Size             = UDim2.new(1, 0, 0, 1),
+Position         = UDim2.new(0, 0, 1, -1),
+BackgroundColor3 = THEME.ACCENT,
+BorderSizePixel  = 0,
 }, TitleBar)
 
--- Logo dot
 local LogoDot = make("Frame", {
-	Size             = UDim2.new(0, 10, 0, 10),
-	Position         = UDim2.new(0, 14, 0.5, -5),
-	BackgroundColor3 = THEME.ACCENT,
-	BorderSizePixel  = 0,
+Size             = UDim2.new(0, 10, 0, 10),
+Position         = UDim2.new(0, 14, 0.5, -5),
+BackgroundColor3 = THEME.ACCENT,
+BorderSizePixel  = 0,
 }, TitleBar)
 corner(5, LogoDot)
 
-local TitleLabel = make("TextLabel", {
-	Text             = "Rivet Hub 2",
-	Font             = FONT_BOLD,
-	TextSize         = 15,
-	TextColor3       = THEME.TEXT,
-	BackgroundTransparency = 1,
-	Size             = UDim2.new(1, -100, 1, 0),
-	Position         = UDim2.new(0, 32, 0, 0),
-	TextXAlignment   = Enum.TextXAlignment.Left,
+make("TextLabel", {
+Text             = "Rivet Hub 2",
+Font             = FONT_BOLD,
+TextSize         = 15,
+TextColor3       = THEME.TEXT,
+BackgroundTransparency = 1,
+Size             = UDim2.new(1, -100, 1, 0),
+Position         = UDim2.new(0, 32, 0, 0),
+TextXAlignment   = Enum.TextXAlignment.Left,
 }, TitleBar)
 
-local SubLabel = make("TextLabel", {
-	Text             = "Grow a Garden",
-	Font             = FONT_SEMI,
-	TextSize         = 11,
-	TextColor3       = THEME.TEXT_DIM,
-	BackgroundTransparency = 1,
-	Size             = UDim2.new(0, 200, 1, 0),
-	Position         = UDim2.new(0, 130, 0, 0),
-	TextXAlignment   = Enum.TextXAlignment.Left,
+make("TextLabel", {
+Text             = "Grow a Garden",
+Font             = FONT_SEMI,
+TextSize         = 11,
+TextColor3       = THEME.TEXT_DIM,
+BackgroundTransparency = 1,
+Size             = UDim2.new(0, 200, 1, 0),
+Position         = UDim2.new(0, 130, 0, 0),
+TextXAlignment   = Enum.TextXAlignment.Left,
 }, TitleBar)
 
--- Close button
 local CloseBtn = make("TextButton", {
-	Text             = "✕",
-	Font             = FONT_BOLD,
-	TextSize         = 13,
-	TextColor3       = THEME.TEXT_DIM,
-	BackgroundColor3 = THEME.TITLE_BAR,
-	BorderSizePixel  = 0,
-	Size             = UDim2.new(0, 32, 0, 32),
-	Position         = UDim2.new(1, -38, 0.5, -16),
+Text             = "X",
+Font             = FONT_BOLD,
+TextSize         = 13,
+TextColor3       = THEME.TEXT_DIM,
+BackgroundColor3 = THEME.TITLE_BAR,
+BorderSizePixel  = 0,
+Size             = UDim2.new(0, 32, 0, 32),
+Position         = UDim2.new(1, -38, 0.5, -16),
 }, TitleBar)
 corner(6, CloseBtn)
 
 CloseBtn.MouseEnter:Connect(function()
-	tween(CloseBtn, { BackgroundColor3 = THEME.CLOSE, TextColor3 = Color3.new(1,1,1) })
+tween(CloseBtn, { BackgroundColor3 = THEME.CLOSE, TextColor3 = Color3.new(1,1,1) })
 end)
 CloseBtn.MouseLeave:Connect(function()
-	tween(CloseBtn, { BackgroundColor3 = THEME.TITLE_BAR, TextColor3 = THEME.TEXT_DIM })
+tween(CloseBtn, { BackgroundColor3 = THEME.TITLE_BAR, TextColor3 = THEME.TEXT_DIM })
 end)
 CloseBtn.MouseButton1Click:Connect(function()
-	ScreenGui.Enabled = false
+ScreenGui.Enabled = false
 end)
 
--- Minimize button
 local MinBtn = make("TextButton", {
-	Text             = "−",
-	Font             = FONT_BOLD,
-	TextSize         = 16,
-	TextColor3       = THEME.TEXT_DIM,
-	BackgroundColor3 = THEME.TITLE_BAR,
-	BorderSizePixel  = 0,
-	Size             = UDim2.new(0, 32, 0, 32),
-	Position         = UDim2.new(1, -74, 0.5, -16),
+Text             = "-",
+Font             = FONT_BOLD,
+TextSize         = 16,
+TextColor3       = THEME.TEXT_DIM,
+BackgroundColor3 = THEME.TITLE_BAR,
+BorderSizePixel  = 0,
+Size             = UDim2.new(0, 32, 0, 32),
+Position         = UDim2.new(1, -74, 0.5, -16),
 }, TitleBar)
 corner(6, MinBtn)
 
 local minimized = false
 MinBtn.MouseEnter:Connect(function()
-	tween(MinBtn, { BackgroundColor3 = THEME.ELEMENT_HOV, TextColor3 = THEME.TEXT })
+tween(MinBtn, { BackgroundColor3 = THEME.ELEMENT_HOV, TextColor3 = THEME.TEXT })
 end)
 MinBtn.MouseLeave:Connect(function()
-	tween(MinBtn, { BackgroundColor3 = THEME.TITLE_BAR, TextColor3 = THEME.TEXT_DIM })
+tween(MinBtn, { BackgroundColor3 = THEME.TITLE_BAR, TextColor3 = THEME.TEXT_DIM })
 end)
 MinBtn.MouseButton1Click:Connect(function()
-	minimized = not minimized
-	if minimized then
-		tween(MainFrame, { Size = UDim2.new(0, 620, 0, 42) }, 0.2)
-	else
-		tween(MainFrame, { Size = UDim2.new(0, 620, 0, 520) }, 0.2)
-	end
+minimized = not minimized
+if minimized then
+tween(MainFrame, { Size = UDim2.new(0, 620, 0, 42) }, 0.2)
+else
+tween(MainFrame, { Size = UDim2.new(0, 620, 0, 520) }, 0.2)
+end
 end)
 
 -- ===== DRAGGING =====
 local dragging, dragStart, startPos = false, nil, nil
 TitleBar.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging  = true
-		dragStart = input.Position
-		startPos  = MainFrame.Position
-	end
+if input.UserInputType == Enum.UserInputType.MouseButton1 then
+dragging  = true
+dragStart = input.Position
+startPos  = MainFrame.Position
+end
 end)
 UserInputService.InputChanged:Connect(function(input)
-	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-		local delta = input.Position - dragStart
-		MainFrame.Position = UDim2.new(
-			startPos.X.Scale, startPos.X.Offset + delta.X,
-			startPos.Y.Scale, startPos.Y.Offset + delta.Y
-		)
-	end
+if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+local delta = input.Position - dragStart
+MainFrame.Position = UDim2.new(
+startPos.X.Scale, startPos.X.Offset + delta.X,
+startPos.Y.Scale, startPos.Y.Offset + delta.Y
+)
+end
 end)
 UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = false
-	end
+if input.UserInputType == Enum.UserInputType.MouseButton1 then
+dragging = false
+end
 end)
 
 -- ===== SIDEBAR =====
 local Sidebar = make("Frame", {
-	Name             = "Sidebar",
-	Size             = UDim2.new(0, 140, 1, -42),
-	Position         = UDim2.new(0, 0, 0, 42),
-	BackgroundColor3 = THEME.SIDEBAR,
-	BorderSizePixel  = 0,
+Name             = "Sidebar",
+Size             = UDim2.new(0, 140, 1, -42),
+Position         = UDim2.new(0, 0, 0, 42),
+BackgroundColor3 = THEME.SIDEBAR,
+BorderSizePixel  = 0,
 }, MainFrame)
 
--- Sidebar border
 make("Frame", {
-	Size             = UDim2.new(0, 1, 1, 0),
-	Position         = UDim2.new(1, -1, 0, 0),
-	BackgroundColor3 = THEME.BORDER,
-	BorderSizePixel  = 0,
+Size             = UDim2.new(0, 1, 1, 0),
+Position         = UDim2.new(1, -1, 0, 0),
+BackgroundColor3 = THEME.BORDER,
+BorderSizePixel  = 0,
 }, Sidebar)
 
-local SidebarList = make("Frame", {
-	Size             = UDim2.new(1, 0, 1, 0),
-	BackgroundTransparency = 1,
+local SidebarList = make("ScrollingFrame", {
+Size                  = UDim2.new(1, 0, 1, 0),
+BackgroundTransparency = 1,
+BorderSizePixel       = 0,
+ScrollBarThickness    = 2,
+ScrollBarImageColor3  = THEME.ACCENT,
+CanvasSize            = UDim2.new(0, 0, 0, 0),
+AutomaticCanvasSize   = Enum.AutomaticSize.Y,
 }, Sidebar)
 make("UIListLayout", {
-	SortOrder        = Enum.SortOrder.LayoutOrder,
-	Padding          = UDim.new(0, 2),
+SortOrder = Enum.SortOrder.LayoutOrder,
+Padding   = UDim.new(0, 2),
 }, SidebarList)
 padding(8, 8, 6, 6, SidebarList)
 
 -- ===== CONTENT AREA =====
 local ContentArea = make("Frame", {
-	Name             = "ContentArea",
-	Size             = UDim2.new(1, -140, 1, -42),
-	Position         = UDim2.new(0, 140, 0, 42),
-	BackgroundColor3 = THEME.BG,
-	BorderSizePixel  = 0,
-	ClipsDescendants = true,
+Name             = "ContentArea",
+Size             = UDim2.new(1, -140, 1, -42),
+Position         = UDim2.new(0, 140, 0, 42),
+BackgroundColor3 = THEME.BG,
+BorderSizePixel  = 0,
+ClipsDescendants = true,
 }, MainFrame)
 
 -- ===== GUI BUILDER =====
-local activeTab     = nil
-local tabFrames     = {}
-local tabButtons    = {}
-local labelRefs     = {}
+local activeTab  = nil
+local tabFrames  = {}
+local tabButtons = {}
 
 local function createTabButton(title, icon)
-	local btn = make("TextButton", {
-		Text             = (icon and icon .. "  " or "") .. title,
-		Font             = FONT_SEMI,
-		TextSize         = 12,
-		TextColor3       = THEME.TEXT_DIM,
-		BackgroundColor3 = THEME.TAB_IDLE,
-		BorderSizePixel  = 0,
-		Size             = UDim2.new(1, 0, 0, 34),
-		TextXAlignment   = Enum.TextXAlignment.Left,
-		AutoButtonColor  = false,
-	}, SidebarList)
-	corner(6, btn)
-	padding(0, 0, 10, 6, btn)
-	return btn
+local btn = make("TextButton", {
+Text             = (icon and icon .. "  " or "") .. title,
+Font             = FONT_SEMI,
+TextSize         = 12,
+TextColor3       = THEME.TEXT_DIM,
+BackgroundColor3 = THEME.TAB_IDLE,
+BorderSizePixel  = 0,
+Size             = UDim2.new(1, 0, 0, 34),
+TextXAlignment   = Enum.TextXAlignment.Left,
+AutoButtonColor  = false,
+}, SidebarList)
+corner(6, btn)
+padding(0, 0, 10, 6, btn)
+return btn
 end
 
 local function createScrollFrame(parent)
-	local scroll = make("ScrollingFrame", {
-		Size                  = UDim2.new(1, 0, 1, 0),
-		BackgroundTransparency = 1,
-		BorderSizePixel       = 0,
-		ScrollBarThickness    = 3,
-		ScrollBarImageColor3  = THEME.ACCENT,
-		CanvasSize            = UDim2.new(0, 0, 0, 0),
-		AutomaticCanvasSize   = Enum.AutomaticSize.Y,
-	}, parent)
-	local list = make("UIListLayout", {
-		SortOrder  = Enum.SortOrder.LayoutOrder,
-		Padding    = UDim.new(0, 6),
-	}, scroll)
-	padding(10, 10, 10, 10, scroll)
-	return scroll, list
+local scroll = make("ScrollingFrame", {
+Size                  = UDim2.new(1, 0, 1, 0),
+BackgroundTransparency = 1,
+BorderSizePixel       = 0,
+ScrollBarThickness    = 3,
+ScrollBarImageColor3  = THEME.ACCENT,
+CanvasSize            = UDim2.new(0, 0, 0, 0),
+AutomaticCanvasSize   = Enum.AutomaticSize.Y,
+}, parent)
+make("UIListLayout", {
+SortOrder = Enum.SortOrder.LayoutOrder,
+Padding   = UDim.new(0, 6),
+}, scroll)
+padding(10, 10, 10, 10, scroll)
+return scroll
 end
 
 local function switchTab(tabName)
-	for name, frame in pairs(tabFrames) do
-		frame.Visible = (name == tabName)
-	end
-	for name, btn in pairs(tabButtons) do
-		if name == tabName then
-			tween(btn, { BackgroundColor3 = THEME.TAB_ACTIVE, TextColor3 = Color3.new(1,1,1) })
-		else
-			tween(btn, { BackgroundColor3 = THEME.TAB_IDLE, TextColor3 = THEME.TEXT_DIM })
-		end
-	end
-	activeTab = tabName
+for name, frame in pairs(tabFrames) do
+frame.Visible = (name == tabName)
+end
+for name, btn in pairs(tabButtons) do
+if name == tabName then
+tween(btn, { BackgroundColor3 = THEME.TAB_ACTIVE, TextColor3 = Color3.new(1,1,1) })
+else
+tween(btn, { BackgroundColor3 = THEME.TAB_IDLE, TextColor3 = THEME.TEXT_DIM })
+end
+end
+activeTab = tabName
 end
 
 -- ===== ELEMENT BUILDERS =====
 local function addLabel(scroll, text)
-	local lbl = make("TextLabel", {
-		Text             = text,
-		Font             = FONT_SEMI,
-		TextSize         = 12,
-		TextColor3       = THEME.TEXT_DIM,
-		BackgroundTransparency = 1,
-		Size             = UDim2.new(1, 0, 0, 18),
-		TextXAlignment   = Enum.TextXAlignment.Left,
-		TextWrapped      = true,
-		AutomaticSize    = Enum.AutomaticSize.Y,
-	}, scroll)
-	return {
-		SetText = function(_, t) lbl.Text = t end,
-		Set     = function(_, t) lbl.Text = t end,
-	}
+local lbl = make("TextLabel", {
+Text             = text,
+Font             = FONT_SEMI,
+TextSize         = 12,
+TextColor3       = THEME.TEXT_DIM,
+BackgroundTransparency = 1,
+Size             = UDim2.new(1, 0, 0, 18),
+TextXAlignment   = Enum.TextXAlignment.Left,
+TextWrapped      = true,
+AutomaticSize    = Enum.AutomaticSize.Y,
+}, scroll)
+return {
+SetText = function(_, t) lbl.Text = t end,
+Set     = function(_, t) lbl.Text = t end,
+}
 end
 
 local function addSection(scroll, title)
-	local sec = make("Frame", {
-		Size             = UDim2.new(1, 0, 0, 28),
-		BackgroundTransparency = 1,
-	}, scroll)
-	make("TextLabel", {
-		Text             = title:upper(),
-		Font             = FONT_BOLD,
-		TextSize         = 10,
-		TextColor3       = THEME.ACCENT,
-		BackgroundTransparency = 1,
-		Size             = UDim2.new(1, 0, 1, 0),
-		TextXAlignment   = Enum.TextXAlignment.Left,
-	}, sec)
-	make("Frame", {
-		Size             = UDim2.new(1, 0, 0, 1),
-		Position         = UDim2.new(0, 0, 1, -1),
-		BackgroundColor3 = THEME.BORDER,
-		BorderSizePixel  = 0,
-	}, sec)
+local sec = make("Frame", {
+Size             = UDim2.new(1, 0, 0, 28),
+BackgroundTransparency = 1,
+}, scroll)
+make("TextLabel", {
+Text             = title:upper(),
+Font             = FONT_BOLD,
+TextSize         = 10,
+TextColor3       = THEME.ACCENT,
+BackgroundTransparency = 1,
+Size             = UDim2.new(1, 0, 1, 0),
+TextXAlignment   = Enum.TextXAlignment.Left,
+}, sec)
+make("Frame", {
+Size             = UDim2.new(1, 0, 0, 1),
+Position         = UDim2.new(0, 0, 1, -1),
+BackgroundColor3 = THEME.BORDER,
+BorderSizePixel  = 0,
+}, sec)
 end
 
 local function addButton(scroll, title, cb)
-	local btn = make("TextButton", {
-		Text             = title,
-		Font             = FONT_SEMI,
-		TextSize         = 12,
-		TextColor3       = THEME.TEXT,
-		BackgroundColor3 = THEME.ELEMENT,
-		BorderSizePixel  = 0,
-		Size             = UDim2.new(1, 0, 0, 32),
-		AutoButtonColor  = false,
-	}, scroll)
-	corner(6, btn)
-	stroke(THEME.BORDER, 1, btn)
-	btn.MouseEnter:Connect(function()
-		tween(btn, { BackgroundColor3 = THEME.ACCENT })
-	end)
-	btn.MouseLeave:Connect(function()
-		tween(btn, { BackgroundColor3 = THEME.ELEMENT })
-	end)
-	btn.MouseButton1Click:Connect(function()
-		tween(btn, { BackgroundColor3 = THEME.ACCENT2 }, 0.05)
-		task.wait(0.1)
-		tween(btn, { BackgroundColor3 = THEME.ELEMENT }, 0.1)
-		if cb then cb() end
-	end)
+local btn = make("TextButton", {
+Text             = title,
+Font             = FONT_SEMI,
+TextSize         = 12,
+TextColor3       = THEME.TEXT,
+BackgroundColor3 = THEME.ELEMENT,
+BorderSizePixel  = 0,
+Size             = UDim2.new(1, 0, 0, 32),
+AutoButtonColor  = false,
+}, scroll)
+corner(6, btn)
+stroke(THEME.BORDER, 1, btn)
+btn.MouseEnter:Connect(function()
+tween(btn, { BackgroundColor3 = THEME.ACCENT })
+end)
+btn.MouseLeave:Connect(function()
+tween(btn, { BackgroundColor3 = THEME.ELEMENT })
+end)
+btn.MouseButton1Click:Connect(function()
+tween(btn, { BackgroundColor3 = THEME.ACCENT2 }, 0.05)
+task.wait(0.1)
+tween(btn, { BackgroundColor3 = THEME.ELEMENT }, 0.1)
+if cb then pcall(cb) end
+end)
 end
 
 local function addToggle(scroll, title, default, cb)
-	local state = default or false
-	local row = make("Frame", {
-		Size             = UDim2.new(1, 0, 0, 32),
-		BackgroundColor3 = THEME.ELEMENT,
-		BorderSizePixel  = 0,
-	}, scroll)
-	corner(6, row)
-	stroke(THEME.BORDER, 1, row)
+local state = default or false
+local row = make("Frame", {
+Size             = UDim2.new(1, 0, 0, 32),
+BackgroundColor3 = THEME.ELEMENT,
+BorderSizePixel  = 0,
+}, scroll)
+corner(6, row)
+stroke(THEME.BORDER, 1, row)
 
-	make("TextLabel", {
-		Text             = title,
-		Font             = FONT_SEMI,
-		TextSize         = 12,
-		TextColor3       = THEME.TEXT,
-		BackgroundTransparency = 1,
-		Size             = UDim2.new(1, -52, 1, 0),
-		Position         = UDim2.new(0, 10, 0, 0),
-		TextXAlignment   = Enum.TextXAlignment.Left,
-	}, row)
+make("TextLabel", {
+Text             = title,
+Font             = FONT_SEMI,
+TextSize         = 12,
+TextColor3       = THEME.TEXT,
+BackgroundTransparency = 1,
+Size             = UDim2.new(1, -52, 1, 0),
+Position         = UDim2.new(0, 10, 0, 0),
+TextXAlignment   = Enum.TextXAlignment.Left,
+}, row)
 
-	local track = make("Frame", {
-		Size             = UDim2.new(0, 36, 0, 18),
-		Position         = UDim2.new(1, -46, 0.5, -9),
-		BackgroundColor3 = state and THEME.TOGGLE_ON or THEME.TOGGLE_OFF,
-		BorderSizePixel  = 0,
-	}, row)
-	corner(9, track)
+local track = make("Frame", {
+Size             = UDim2.new(0, 36, 0, 18),
+Position         = UDim2.new(1, -46, 0.5, -9),
+BackgroundColor3 = state and THEME.TOGGLE_ON or THEME.TOGGLE_OFF,
+BorderSizePixel  = 0,
+}, row)
+corner(9, track)
 
-	local knob = make("Frame", {
-		Size             = UDim2.new(0, 14, 0, 14),
-		Position         = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7),
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		BorderSizePixel  = 0,
-	}, track)
-	corner(7, knob)
+local knob = make("Frame", {
+Size             = UDim2.new(0, 14, 0, 14),
+Position         = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7),
+BackgroundColor3 = Color3.new(1, 1, 1),
+BorderSizePixel  = 0,
+}, track)
+corner(7, knob)
 
-	local function updateVisual()
-		tween(track, { BackgroundColor3 = state and THEME.TOGGLE_ON or THEME.TOGGLE_OFF })
-		tween(knob, { Position = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7) })
-	end
+local function updateVisual()
+tween(track, { BackgroundColor3 = state and THEME.TOGGLE_ON or THEME.TOGGLE_OFF })
+tween(knob, { Position = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7) })
+end
 
-	local btn = make("TextButton", {
-		Text             = "",
-		BackgroundTransparency = 1,
-		Size             = UDim2.new(1, 0, 1, 0),
-	}, row)
-	btn.MouseButton1Click:Connect(function()
-		state = not state
-		updateVisual()
-		if cb then cb(state) end
-	end)
+local btn = make("TextButton", {
+Text             = "",
+BackgroundTransparency = 1,
+Size             = UDim2.new(1, 0, 1, 0),
+}, row)
+btn.MouseButton1Click:Connect(function()
+state = not state
+updateVisual()
+if cb then pcall(cb, state) end
+end)
 end
 
 local function addInput(scroll, title, placeholder, cb)
-	local wrap = make("Frame", {
-		Size             = UDim2.new(1, 0, 0, 52),
-		BackgroundTransparency = 1,
-	}, scroll)
+local wrap = make("Frame", {
+Size             = UDim2.new(1, 0, 0, 52),
+BackgroundTransparency = 1,
+}, scroll)
 
-	make("TextLabel", {
-		Text             = title,
-		Font             = FONT_SEMI,
-		TextSize         = 11,
-		TextColor3       = THEME.TEXT_DIM,
-		BackgroundTransparency = 1,
-		Size             = UDim2.new(1, 0, 0, 18),
-		TextXAlignment   = Enum.TextXAlignment.Left,
-	}, wrap)
+make("TextLabel", {
+Text             = title,
+Font             = FONT_SEMI,
+TextSize         = 11,
+TextColor3       = THEME.TEXT_DIM,
+BackgroundTransparency = 1,
+Size             = UDim2.new(1, 0, 0, 18),
+TextXAlignment   = Enum.TextXAlignment.Left,
+}, wrap)
 
-	local box = make("TextBox", {
-		PlaceholderText  = placeholder or "",
-		Text             = "",
-		Font             = FONT_SEMI,
-		TextSize         = 12,
-		TextColor3       = THEME.TEXT,
-		PlaceholderColor3 = THEME.TEXT_DIM,
-		BackgroundColor3 = THEME.INPUT_BG,
-		BorderSizePixel  = 0,
-		Size             = UDim2.new(1, 0, 0, 28),
-		Position         = UDim2.new(0, 0, 0, 20),
-		ClearTextOnFocus = false,
-	}, wrap)
-	corner(6, box)
-	stroke(THEME.BORDER, 1, box)
-	padding(0, 0, 8, 8, box)
+local box = make("TextBox", {
+PlaceholderText   = placeholder or "",
+Text              = "",
+Font              = FONT_SEMI,
+TextSize          = 12,
+TextColor3        = THEME.TEXT,
+PlaceholderColor3 = THEME.TEXT_DIM,
+BackgroundColor3  = THEME.INPUT_BG,
+BorderSizePixel   = 0,
+Size              = UDim2.new(1, 0, 0, 28),
+Position          = UDim2.new(0, 0, 0, 20),
+ClearTextOnFocus  = false,
+}, wrap)
+corner(6, box)
+stroke(THEME.BORDER, 1, box)
+padding(0, 0, 8, 8, box)
 
-	box.Focused:Connect(function()
-		tween(box, { BackgroundColor3 = THEME.ELEMENT })
-		stroke(THEME.ACCENT, 1, box)
-	end)
-	box.FocusLost:Connect(function(enter)
-		tween(box, { BackgroundColor3 = THEME.INPUT_BG })
-		if enter and cb then cb(box.Text) end
-	end)
+box.FocusLost:Connect(function(enter)
+if enter and cb then pcall(cb, box.Text) end
+end)
 end
 
 local function addDropdown(scroll, title, values, multi, cb)
-	local selected = {}
-	local open = false
+local selected = {}
+local open = false
 
-	local wrap = make("Frame", {
-		Size             = UDim2.new(1, 0, 0, 32),
-		BackgroundColor3 = THEME.ELEMENT,
-		BorderSizePixel  = 0,
-		ClipsDescendants = false,
-		ZIndex           = 5,
-	}, scroll)
-	corner(6, wrap)
-	stroke(THEME.BORDER, 1, wrap)
+local wrap = make("Frame", {
+Size             = UDim2.new(1, 0, 0, 32),
+BackgroundColor3 = THEME.ELEMENT,
+BorderSizePixel  = 0,
+ClipsDescendants = false,
+ZIndex           = 5,
+}, scroll)
+corner(6, wrap)
+stroke(THEME.BORDER, 1, wrap)
 
-	local header = make("TextButton", {
-		Text             = title .. " ▾",
-		Font             = FONT_SEMI,
-		TextSize         = 12,
-		TextColor3       = THEME.TEXT,
-		BackgroundTransparency = 1,
-		Size             = UDim2.new(1, 0, 0, 32),
-		TextXAlignment   = Enum.TextXAlignment.Left,
-		AutoButtonColor  = false,
-		ZIndex           = 6,
-	}, wrap)
-	padding(0, 0, 10, 10, header)
+local header = make("TextButton", {
+Text             = title .. " v",
+Font             = FONT_SEMI,
+TextSize         = 12,
+TextColor3       = THEME.TEXT,
+BackgroundTransparency = 1,
+Size             = UDim2.new(1, 0, 0, 32),
+TextXAlignment   = Enum.TextXAlignment.Left,
+AutoButtonColor  = false,
+ZIndex           = 6,
+}, wrap)
+padding(0, 0, 10, 10, header)
 
-	local dropdown = make("Frame", {
-		Size             = UDim2.new(1, 0, 0, 0),
-		Position         = UDim2.new(0, 0, 1, 2),
-		BackgroundColor3 = THEME.SECTION,
-		BorderSizePixel  = 0,
-		ClipsDescendants = true,
-		Visible          = false,
-		ZIndex           = 10,
-	}, wrap)
-	corner(6, dropdown)
-	stroke(THEME.BORDER, 1, dropdown)
+local dropdown = make("Frame", {
+Size             = UDim2.new(1, 0, 0, 0),
+Position         = UDim2.new(0, 0, 1, 2),
+BackgroundColor3 = THEME.SECTION,
+BorderSizePixel  = 0,
+ClipsDescendants = true,
+Visible          = false,
+ZIndex           = 10,
+}, wrap)
+corner(6, dropdown)
+stroke(THEME.BORDER, 1, dropdown)
 
-	local ddScroll = make("ScrollingFrame", {
-		Size                  = UDim2.new(1, 0, 1, 0),
-		BackgroundTransparency = 1,
-		BorderSizePixel       = 0,
-		ScrollBarThickness    = 2,
-		ScrollBarImageColor3  = THEME.ACCENT,
-		CanvasSize            = UDim2.new(0, 0, 0, 0),
-		AutomaticCanvasSize   = Enum.AutomaticSize.Y,
-		ZIndex                = 11,
-	}, dropdown)
-	make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 1) }, ddScroll)
+local ddScroll = make("ScrollingFrame", {
+Size                  = UDim2.new(1, 0, 1, 0),
+BackgroundTransparency = 1,
+BorderSizePixel       = 0,
+ScrollBarThickness    = 2,
+ScrollBarImageColor3  = THEME.ACCENT,
+CanvasSize            = UDim2.new(0, 0, 0, 0),
+AutomaticCanvasSize   = Enum.AutomaticSize.Y,
+ZIndex                = 11,
+}, dropdown)
+make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 1) }, ddScroll)
 
-	local function updateHeader()
-		if multi then
-			header.Text = title .. " (" .. #selected .. " selected) ▾"
-		else
-			header.Text = title .. " ▾"
-		end
-	end
+local function updateHeader()
+if multi then
+header.Text = title .. " (" .. #selected .. " selected) v"
+else
+header.Text = title .. " v"
+end
+end
 
-	for _, val in ipairs(values) do
-		local item = make("TextButton", {
-			Text             = val,
-			Font             = FONT_SEMI,
-			TextSize         = 11,
-			TextColor3       = THEME.TEXT_DIM,
-			BackgroundColor3 = THEME.SECTION,
-			BorderSizePixel  = 0,
-			Size             = UDim2.new(1, 0, 0, 26),
-			TextXAlignment   = Enum.TextXAlignment.Left,
-			AutoButtonColor  = false,
-			ZIndex           = 12,
-		}, ddScroll)
-		padding(0, 0, 8, 8, item)
+for _, val in ipairs(values) do
+local item = make("TextButton", {
+Text             = val,
+Font             = FONT_SEMI,
+TextSize         = 11,
+TextColor3       = THEME.TEXT_DIM,
+BackgroundColor3 = THEME.SECTION,
+BorderSizePixel  = 0,
+Size             = UDim2.new(1, 0, 0, 26),
+TextXAlignment   = Enum.TextXAlignment.Left,
+AutoButtonColor  = false,
+ZIndex           = 12,
+}, ddScroll)
+padding(0, 0, 8, 8, item)
 
-		item.MouseEnter:Connect(function()
-			tween(item, { BackgroundColor3 = THEME.ELEMENT_HOV })
-		end)
-		item.MouseLeave:Connect(function()
-			local isSelected = table.find(selected, val)
-			tween(item, { BackgroundColor3 = isSelected and THEME.ACCENT or THEME.SECTION })
-		end)
+item.MouseEnter:Connect(function()
+tween(item, { BackgroundColor3 = THEME.ELEMENT_HOV })
+end)
+item.MouseLeave:Connect(function()
+local isSelected = table.find(selected, val)
+tween(item, { BackgroundColor3 = isSelected and THEME.ACCENT or THEME.SECTION })
+end)
 
-		item.MouseButton1Click:Connect(function()
-			if multi then
-				local idx = table.find(selected, val)
-				if idx then
-					table.remove(selected, idx)
-					tween(item, { BackgroundColor3 = THEME.SECTION, TextColor3 = THEME.TEXT_DIM })
-				else
-					table.insert(selected, val)
-					tween(item, { BackgroundColor3 = THEME.ACCENT, TextColor3 = Color3.new(1,1,1) })
-				end
-				updateHeader()
-				if cb then cb(selected) end
-			else
-				selected = { val }
-				updateHeader()
-				open = false
-				dropdown.Visible = false
-				wrap.Size = UDim2.new(1, 0, 0, 32)
-				if cb then cb(val) end
-			end
-		end)
-	end
+item.MouseButton1Click:Connect(function()
+if multi then
+local idx = table.find(selected, val)
+if idx then
+table.remove(selected, idx)
+tween(item, { BackgroundColor3 = THEME.SECTION, TextColor3 = THEME.TEXT_DIM })
+else
+table.insert(selected, val)
+tween(item, { BackgroundColor3 = THEME.ACCENT, TextColor3 = Color3.new(1,1,1) })
+end
+updateHeader()
+if cb then pcall(cb, selected) end
+else
+selected = { val }
+updateHeader()
+open = false
+dropdown.Visible = false
+wrap.Size = UDim2.new(1, 0, 0, 32)
+if cb then pcall(cb, val) end
+end
+end)
+end
 
-	-- Limit dropdown height to 180px
-	local ddHeight = math.min(#values * 27, 180)
+local ddHeight = math.min(#values * 27, 180)
 
-	header.MouseButton1Click:Connect(function()
-		open = not open
-		dropdown.Visible = open
-		if open then
-			dropdown.Size = UDim2.new(1, 0, 0, ddHeight)
-			wrap.Size = UDim2.new(1, 0, 0, 32 + ddHeight + 4)
-		else
-			dropdown.Size = UDim2.new(1, 0, 0, 0)
-			wrap.Size = UDim2.new(1, 0, 0, 32)
-		end
-	end)
+header.MouseButton1Click:Connect(function()
+open = not open
+dropdown.Visible = open
+if open then
+dropdown.Size = UDim2.new(1, 0, 0, ddHeight)
+wrap.Size = UDim2.new(1, 0, 0, 32 + ddHeight + 4)
+else
+dropdown.Size = UDim2.new(1, 0, 0, 0)
+wrap.Size = UDim2.new(1, 0, 0, 32)
+end
+end)
 end
 
 local function addDivider(scroll)
-	make("Frame", {
-		Size             = UDim2.new(1, 0, 0, 1),
-		BackgroundColor3 = THEME.BORDER,
-		BorderSizePixel  = 0,
-	}, scroll)
+make("Frame", {
+Size             = UDim2.new(1, 0, 0, 1),
+BackgroundColor3 = THEME.BORDER,
+BorderSizePixel  = 0,
+}, scroll)
 end
 
 -- ===== TAB FACTORY =====
 local function createTab(title, icon)
-	local btn = createTabButton(title, icon)
-	local frame = make("Frame", {
-		Size             = UDim2.new(1, 0, 1, 0),
-		BackgroundTransparency = 1,
-		Visible          = false,
-	}, ContentArea)
+local btn = createTabButton(title, icon)
+local frame = make("Frame", {
+Size             = UDim2.new(1, 0, 1, 0),
+BackgroundTransparency = 1,
+Visible          = false,
+}, ContentArea)
 
-	local scroll, _ = createScrollFrame(frame)
+local scroll = createScrollFrame(frame)
 
-	tabFrames[title]  = frame
-	tabButtons[title] = btn
+tabFrames[title]  = frame
+tabButtons[title] = btn
 
-	btn.MouseEnter:Connect(function()
-		if activeTab ~= title then
-			tween(btn, { BackgroundColor3 = THEME.TAB_HOVER, TextColor3 = THEME.TEXT })
-		end
-	end)
-	btn.MouseLeave:Connect(function()
-		if activeTab ~= title then
-			tween(btn, { BackgroundColor3 = THEME.TAB_IDLE, TextColor3 = THEME.TEXT_DIM })
-		end
-	end)
-	btn.MouseButton1Click:Connect(function()
-		switchTab(title)
-	end)
+btn.MouseEnter:Connect(function()
+if activeTab ~= title then
+tween(btn, { BackgroundColor3 = THEME.TAB_HOVER, TextColor3 = THEME.TEXT })
+end
+end)
+btn.MouseLeave:Connect(function()
+if activeTab ~= title then
+tween(btn, { BackgroundColor3 = THEME.TAB_IDLE, TextColor3 = THEME.TEXT_DIM })
+end
+end)
+btn.MouseButton1Click:Connect(function()
+switchTab(title)
+end)
 
-	return {
-		Label    = function(_, t)        return addLabel(scroll, t) end,
-		Section  = function(_, t)        addSection(scroll, t) end,
-		Button   = function(_, t, cb)    addButton(scroll, t, cb) end,
-		Toggle   = function(_, t, d, cb) addToggle(scroll, t, d, cb) end,
-		Input    = function(_, t, p, cb) addInput(scroll, t, p, cb) end,
-		Dropdown = function(_, t, v, m, cb) addDropdown(scroll, t, v, m, cb) end,
-		Divider  = function(_)           addDivider(scroll) end,
-	}
+return {
+Label    = function(_, t)           return addLabel(scroll, t) end,
+Section  = function(_, t)           addSection(scroll, t) end,
+Button   = function(_, t, cb)       addButton(scroll, t, cb) end,
+Toggle   = function(_, t, d, cb)    addToggle(scroll, t, d, cb) end,
+Input    = function(_, t, p, cb)    addInput(scroll, t, p, cb) end,
+Dropdown = function(_, t, v, m, cb) addDropdown(scroll, t, v, m, cb) end,
+Divider  = function(_)              addDivider(scroll) end,
+}
 end
 
--- Shorthand aliases so existing code works
 local function Tab(title, icon) return createTab(title, icon) end
+
 
 -- ============================================================
 -- BUILD ALL TABS
 -- ============================================================
 
 -- TAB 1: SNIPE PETS
-local SnipeTab = Tab("Snipe Pets", "🎯")
+local SnipeTab = Tab("Snipe Pets", "")
 local snipeStatusLabel = SnipeTab:Label("Status: IDLE | Selected: 0 pets")
 SnipeTab:Section("Pet Selection")
 SnipeTab:Dropdown("Select Pets to Snipe", PET_LIST, true, function(val)
@@ -1584,7 +1620,7 @@ SnipeTab:Button("Clear Pet Selection", function()
 	snipeStatusLabel:Set("Status: IDLE | Selected: 0 pets")
 end)
 SnipeTab:Section("Controls")
-SnipeTab:Button("▶  START SNIPING", function()
+SnipeTab:Button("START SNIPING", function()
 	if #selectedPets == 0 then notify("Error","Select pets first!") return end
 	if isAutoSniping then return end
 	isAutoSniping = true
@@ -1592,7 +1628,7 @@ SnipeTab:Button("▶  START SNIPING", function()
 	notify("Snipe","Started! F6 to stop.")
 	task.spawn(snipeLoop)
 end)
-SnipeTab:Button("⏹  STOP SNIPING", function()
+SnipeTab:Button("STOP SNIPING", function()
 	isAutoSniping = false
 	snipeStatusLabel:Set("Status: IDLE | Selected: "..#selectedPets.." pets")
 	notify("Snipe","Stopped.")
@@ -1606,11 +1642,11 @@ SnipeTab:Toggle("Auto Teleport to Pet", false, function(v) settings.autoTeleport
 SnipeTab:Toggle("Auto Rejoin After Snipe", false, function(v) settings.autoRejoin=v end)
 
 -- TAB 2: BOOTHS
-local BoothsTab = Tab("Booths", "🔍")
+local BoothsTab = Tab("Booths", "")
 local scanFilterLabel = BoothsTab:Label("Filter: All 364 pets")
 local scanResultLabel = BoothsTab:Label("Press Scan to find pets")
 BoothsTab:Section("Scan Filter")
-BoothsTab:Dropdown("Scan Filter (empty = all pets)", PET_LIST, true, function(val)
+BoothsTab:Dropdown("Scan Filter (empty = all)", PET_LIST, true, function(val)
 	scanPets = val
 	scanFilterLabel:Set("Filter: "..(#val==0 and "All 364 pets" or #val.." pets selected"))
 end)
@@ -1639,7 +1675,7 @@ BoothsTab:Toggle("Auto Scan Every 5s", false, function(val)
 end)
 
 -- TAB 3: PET TOOLS
-local PetTab = Tab("Pet Tools", "🐾")
+local PetTab = Tab("Pet Tools", "")
 local petUUIDInput = ""
 PetTab:Section("Sell & Favorite")
 PetTab:Input("Pet UUID", "Paste UUID here", function(v) petUUIDInput=v end)
@@ -1659,7 +1695,7 @@ PetTab:Input("Boost Item Name", "e.g. Medium Pet Toy", function(v) boostItem=v e
 PetTab:Button("Apply Boost", function() boostPet(boostUUID, boostItem) end)
 
 -- TAB 4: HATCH
-local HatchTab = Tab("Hatch", "🥚")
+local HatchTab = Tab("Hatch", "")
 local hatchLabel = HatchTab:Label("Hatched: 0 | Select eggs below")
 HatchTab:Section("Egg Selection")
 HatchTab:Dropdown("Select Eggs to Hatch", EGG_LIST, true, function(val)
@@ -1689,7 +1725,7 @@ end)
 HatchTab:Button("Sell Hatched Pets Now", function() task.spawn(sellHatchedPets) end)
 
 -- TAB 5: FARM
-local FarmTab = Tab("Farm", "🌱")
+local FarmTab = Tab("Farm", "")
 FarmTab:Section("Crop Collection")
 FarmTab:Button("Collect All Crops Now", function() task.spawn(collectCrops) end)
 FarmTab:Toggle("Auto Collect Crops", false, function(val)
@@ -1719,7 +1755,7 @@ FarmTab:Toggle("Auto Plant Seeds", false, function(val)
 end)
 
 -- TAB 6: SPRINKLER
-local SprinklerTab = Tab("Sprinkler", "💧")
+local SprinklerTab = Tab("Sprinkler", "")
 SprinklerTab:Section("Sprinkler Control")
 SprinklerTab:Button("Place Sprinkler", function() task.spawn(placeSprinkler) end)
 SprinklerTab:Button("Remove All Sprinklers", function() task.spawn(removeAllSprinklers) end)
@@ -1730,7 +1766,7 @@ SprinklerTab:Toggle("Auto Place Sprinkler (every 60s)", false, function(val)
 end)
 
 -- TAB 7: COOKING
-local CookTab = Tab("Cooking", "🍳")
+local CookTab = Tab("Cooking", "")
 CookTab:Section("Ingredients (up to 5)")
 CookTab:Input("Ingredient 1", "Item name", function(v) cookingItems[1]=v end)
 CookTab:Input("Ingredient 2", "Item name", function(v) cookingItems[2]=v end)
@@ -1747,7 +1783,7 @@ CookTab:Toggle("Auto Cook Loop", false, function(val)
 end)
 
 -- TAB 8: MUTATION
-local MutTab = Tab("Mutation", "🧬")
+local MutTab = Tab("Mutation", "")
 local mutUUID = ""
 MutTab:Section("Mutation Machine")
 MutTab:Input("Pet UUID", "Paste UUID here", function(v) mutUUID=v end)
@@ -1755,7 +1791,7 @@ MutTab:Button("Submit Pet to Machine", function() submitMutation(mutUUID) end)
 MutTab:Button("Collect from Machine", function() collectMutation() end)
 
 -- TAB 9: SHOPS
-local ShopTab = Tab("Shops", "🛒")
+local ShopTab = Tab("Shops", "")
 local shopItem, shopAmt = "", 1
 ShopTab:Section("Buy Items")
 ShopTab:Input("Item Name", "e.g. Watering Can", function(v) shopItem=v end)
@@ -1767,7 +1803,7 @@ ShopTab:Button("Buy from Event Shop",         function() if shopItem~="" then bu
 ShopTab:Button("Buy from Traveling Merchant", function() if shopItem~="" then buyFromTravelingMerchant(shopItem,shopAmt) end end)
 
 -- TAB 10: ADVANCED
-local AdvTab = Tab("Advanced", "⚡")
+local AdvTab = Tab("Advanced", "")
 AdvTab:Section("Auto Rejoin")
 AdvTab:Toggle("Auto Rejoin on Disconnect", false, function(v) isAutoRejoinDC=v notify("Rejoin", v and "ON" or "OFF") end)
 AdvTab:Input("Rejoin After Hatch Count", "Default: 30", function(v) local n=tonumber(v) if n then hatchRejoinLimit=n end end)
@@ -1801,7 +1837,7 @@ AdvTab:Button("Save Current Position", function() if cframeNameInput~="" then sa
 AdvTab:Button("Teleport to Saved Position", function() if cframeNameInput~="" then loadCFrame(cframeNameInput) end end)
 
 -- TAB 11: PET SYSTEMS
-local PetSysTab = Tab("Pet Systems", "🐾")
+local PetSysTab = Tab("Pet Systems", "")
 PetSysTab:Section("Pet Level Boost")
 PetSysTab:Input("Max Level Target", "e.g. 100", function(v) local n=tonumber(v) if n then petLevelSettings.maxLevel=n end end)
 PetSysTab:Input("Min Level to Start", "e.g. 0", function(v) local n=tonumber(v) if n then petLevelSettings.minLevel=n end end)
@@ -1832,7 +1868,7 @@ PetSysTab:Toggle("Auto Sell Backpack (time-based)", false, function(v)
 end)
 
 -- TAB 12: GIFT & TRADE
-local GiftTab = Tab("Gift & Trade", "🎁")
+local GiftTab = Tab("Gift & Trade", "")
 local playerTargetLabel = GiftTab:Label("Targets: None")
 GiftTab:Section("Gift Settings")
 GiftTab:Toggle("Allow Gifting Favorited Pets", false, function(v) giftSettings.allowFav=v end)
@@ -1917,7 +1953,7 @@ GiftTab:Button("Check Trade Status", function()
 end)
 
 -- TAB 13: STATS
-local StatsTab = Tab("Stats", "📊")
+local StatsTab = Tab("Stats", "")
 local statsLabel = StatsTab:Label("No stats yet")
 StatsTab:Section("Live Statistics")
 StatsTab:Button("Clear All Stats", function()
@@ -1926,7 +1962,7 @@ StatsTab:Button("Clear All Stats", function()
 end)
 
 -- TAB 14: SETTINGS
-local SettingsTab = Tab("Settings", "⚙️")
+local SettingsTab = Tab("Settings", "")
 SettingsTab:Section("General")
 SettingsTab:Toggle("Enable Notifications", true, function(v) settings.notifications=v end)
 SettingsTab:Button("Reset All Settings", function()
@@ -1957,15 +1993,15 @@ RunService.Heartbeat:Connect(function()
 		.."\nHatched: "..stats.hatched.." | Sold: "..stats.sold
 		.."\nCollected: "..stats.collected.." | Planted: "..stats.planted
 		.."\nScans: "..stats.totalScans.." | Avg: "..avg.."t"
-		.."\nSnipe: "..(isAutoSniping and "🟢 ACTIVE" or "🔴 IDLE")
+		.."\nSnipe: "..(isAutoSniping and "ACTIVE" or "IDLE")
 		.."\n\nRecent Snipes:\n"
 	for i = math.max(1, #stats.history-7), #stats.history do
 		local e = stats.history[i]
 		if e then txt=txt..e.time.." | ("..e.price..") "..e.pet.." ("..e.kg.."kg)\n" end
 	end
-	statsLabel:Set(txt)
-	snipeStatusLabel:Set("Status: "..(isAutoSniping and "ACTIVE" or "IDLE").." | Selected: "..#selectedPets.." pets")
-	hatchLabel:Set("Hatched: "..stats.hatched.." | Selected: "..#selectedEggs.." eggs")
+	pcall(function() statsLabel:Set(txt) end)
+	pcall(function() snipeStatusLabel:Set("Status: "..(isAutoSniping and "ACTIVE" or "IDLE").." | Selected: "..#selectedPets.." pets") end)
+	pcall(function() hatchLabel:Set("Hatched: "..stats.hatched.." | Selected: "..#selectedEggs.." eggs") end)
 end)
 
 -- ============================================================
@@ -1995,7 +2031,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
 	end
 end)
 
-print("✅ Rivet Hub 2 loaded!")
-print("   F6 = Start/Stop Sniping")
-print("   RightControl = Toggle UI")
-print("   LeftControl = Minimize")
+print("Rivet Hub 2 loaded!")
+print("F6 = Start/Stop Sniping")
+print("RightControl = Toggle UI")
+print("LeftControl = Minimize")
