@@ -178,14 +178,21 @@ _S.invite_link_url = ""
 _S.invite_link_short = ""
 
 
--- [SETUP UI] - Using Obsidian UI Library
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/GreenDeno/Venyx-UI-Library/main/source.lua"))()
-local venyx = Library.new("🌟 ExoHub Premium - Grow a Garden", 5013109572)
+-- [SETUP UI] - Using Orion UI Library (Reliable and Working)
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 
-if not Library then
-    print("Obsidian UI Library failed to load. Stopping")
+if not OrionLib then
+    print("Orion UI Library failed to load. Stopping")
     return
 end
+
+-- Create Window
+local Window = OrionLib:MakeWindow({
+    Name = "🌟 ExoHub Premium - Grow a Garden", 
+    HidePremium = false, 
+    SaveConfig = true, 
+    ConfigFolder = "ExoHubConfig"
+})
 
 -- #start
 _S.AppName = "ExoHub - Independent"
@@ -27228,45 +27235,204 @@ end
 
 
 
--- Create main UI pages with Obsidian
-local homePage = venyx:addPage("🏠 Home", 5012544693)
-local petsPage = venyx:addPage("🐾 Pet Management", 5012544693)
-local hatchingPage = venyx:addPage("🥚 Hatching", 5012544693)
-local farmingPage = venyx:addPage("🌱 Farming", 5012544693)
-local mutationPage = venyx:addPage("🧬 Mutation", 5012544693)
-local settingsPage = venyx:addPage("⚙️ Settings", 5012544693)
+-- Notification wrapper for Orion UI compatibility
+local function LibraryNotify(message, duration)
+    OrionLib:MakeNotification({
+        Name = "ExoHub",
+        Content = tostring(message),
+        Image = "rbxassetid://4483362458",
+        Time = duration or 3
+    })
+    print("📢 ExoHub: " .. tostring(message))
+end
+
+-- Override Library:Notify for compatibility
+if not Library then Library = {} end
+Library.Notify = LibraryNotify
+
+-- Create main tabs
+local HomeTab = Window:MakeTab({
+    Name = "🏠 Home",
+    Icon = "rbxassetid://4483362458",
+    PremiumOnly = false
+})
+
+local PetsTab = Window:MakeTab({
+    Name = "🐾 Pet Management", 
+    Icon = "rbxassetid://4483362458",
+    PremiumOnly = false
+})
+
+local HatchingTab = Window:MakeTab({
+    Name = "🥚 Hatching",
+    Icon = "rbxassetid://4483362458", 
+    PremiumOnly = false
+})
+
+local FarmingTab = Window:MakeTab({
+    Name = "🌱 Farming",
+    Icon = "rbxassetid://4483362458",
+    PremiumOnly = false
+})
+
+local MutationTab = Window:MakeTab({
+    Name = "🧬 Mutation",
+    Icon = "rbxassetid://4483362458",
+    PremiumOnly = false
+})
+
+local SettingsTab = Window:MakeTab({
+    Name = "⚙️ Settings",
+    Icon = "rbxassetid://4483362458",
+    PremiumOnly = false
+})
 
 -- #homeui
 -- HomeDashboardUi =======================================
 local function HomeDashboardUi()
     local sv = GetServerVersion()
     
-    -- Home Page Sections
-    local homeSection1 = homePage:addSection("📊 Dashboard")
-    local homeSection2 = homePage:addSection("🎮 Quick Controls")
+    -- Home Tab Sections
+    HomeTab:AddLabel("🌟 ExoHub Premium - Grow a Garden")
+    HomeTab:AddLabel("Server Version: " .. sv)
+    HomeTab:AddLabel("Status: All systems ready")
     
-    homeSection1:addLabel("🌟 ExoHub Premium - Grow a Garden")
-    homeSection1:addLabel("Server Version: " .. sv)
-    homeSection1:addLabel("Status: All systems ready")
+    HomeTab:AddToggle({
+        Name = "⏸️ Pause All Systems",
+        Default = FSettings.pause_systems,
+        Callback = function(value)
+            FSettings.pause_systems = value
+            if value then
+                LibraryNotify("⏸️ All systems paused", 3)
+            else
+                LibraryNotify("▶️ All systems resumed", 3)
+            end
+            SaveData()
+        end    
+    })
     
-    -- Quick toggle for main systems
-    -- Pet Management Page
-    local petSection1 = petsPage:addSection("🐾 Auto Sell System")
-    local petSection2 = petsPage:addSection("📊 Pet Statistics")
+    -- Pet Management Tab
+    PetsTab:AddSection({Name = "� Auto Sell System"})
     
-    petSection1:addToggle("autoSellPets", "🔄 Auto Sell Pets", FSettings.sellingpets.auto_pet_sell, function(value)
-        FSettings.sellingpets.auto_pet_sell = value
-        LibraryNotify("Auto sell pets: " .. (value and "ON" or "OFF"), 3)
-        SaveData()
-    end)
+    PetsTab:AddToggle({
+        Name = "🔄 Auto Sell Pets",
+        Default = FSettings.sellingpets.auto_pet_sell,
+        Callback = function(value)
+            FSettings.sellingpets.auto_pet_sell = value
+            LibraryNotify("Auto sell pets: " .. (value and "ON" or "OFF"), 3)
+            SaveData()
+        end
+    })
     
-    petSection1:addSlider("sellWeightMin", "Min Weight to Sell", FSettings.sellingpets.auto_sell_weight_min, 0, 10, function(value)
-        FSettings.sellingpets.auto_sell_weight_min = value
-        SaveData()
-    end)
+    PetsTab:AddSlider({
+        Name = "Min Weight to Sell",
+        Min = 0,
+        Max = 10,
+        Default = FSettings.sellingpets.auto_sell_weight_min,
+        Color = Color3.fromRGB(255,255,255),
+        Increment = 0.1,
+        ValueName = "kg",
+        Callback = function(value)
+            FSettings.sellingpets.auto_sell_weight_min = value
+            SaveData()
+        end    
+    })
     
-    petSection1:addSlider("sellAgeMax", "Max Age to Sell", FSettings.sellingpets.auto_sell_age, 0, 200, function(value)
-        FSettings.sellingpets.auto_sell_age = value
+    PetsTab:AddSlider({
+        Name = "Max Age to Sell",
+        Min = 0,
+        Max = 200,
+        Default = FSettings.sellingpets.auto_sell_age,
+        Color = Color3.fromRGB(255,255,255),
+        Increment = 1,
+        ValueName = "days",
+        Callback = function(value)
+            FSettings.sellingpets.auto_sell_age = value
+            SaveData()
+        end    
+    })
+    
+    -- Hatching Tab
+    HatchingTab:AddSection({Name = "🥚 Auto Hatching"})
+    
+    HatchingTab:AddToggle({
+        Name = "🔄 Auto Hatch Enabled",
+        Default = FSettings.is_auto_hatch_enabled,
+        Callback = function(value)
+            FSettings.is_auto_hatch_enabled = value
+            if value then
+                Varz.StartHatchingSystem()
+            else
+                if main_thread then
+                    task.cancel(main_thread)
+                    main_thread = nil
+                end
+            end
+            LibraryNotify("Auto hatching: " .. (value and "ON" or "OFF"), 3)
+            SaveData()
+        end
+    })
+    
+    -- Farming Tab
+    FarmingTab:AddSection({Name = "🌱 Auto Farming"})
+    
+    FarmingTab:AddToggle({
+        Name = "🌱 Auto Plant Seeds",
+        Default = FOtherSettings.is_auto_seed,
+        Callback = function(value)
+            FOtherSettings.is_auto_seed = value
+            LibraryNotify("Auto planting: " .. (value and "ON" or "OFF"), 3)
+            SaveDataOther()
+        end
+    })
+    
+    FarmingTab:AddToggle({
+        Name = "💧 Auto Water Plants",
+        Default = FOtherSettings.watering_is_auto,
+        Callback = function(value)
+            FOtherSettings.watering_is_auto = value
+            LibraryNotify("Auto watering: " .. (value and "ON" or "OFF"), 3)
+            SaveDataOther()
+        end
+    })
+    
+    -- Mutation Tab
+    MutationTab:AddSection({Name = "🧬 Mutation Machine"})
+    
+    MutationTab:AddToggle({
+        Name = "🧬 Mutation System",
+        Default = FSettings.mut_system.is_ruuning,
+        Callback = function(value)
+            FSettings.mut_system.is_ruuning = value
+            if value then
+                PetMutation.StartThread()
+            else
+                PetMutation.StopThread()
+            end
+            SaveData()
+        end
+    })
+    
+    -- Settings Tab
+    SettingsTab:AddSection({Name = "⚙️ General Settings"})
+    
+    SettingsTab:AddToggle({
+        Name = "🔄 Auto Rejoin",
+        Default = FSettings.is_auto_rejoin,
+        Callback = function(value)
+            FSettings.is_auto_rejoin = value
+            SaveData()
+        end
+    })
+    
+    SettingsTab:AddToggle({
+        Name = "🔔 Enable Notifications",
+        Default = FSettings.use_noti,
+        Callback = function(value)
+            FSettings.use_noti = value
+            SaveData()
+        end
+    })
         SaveData()
     end)
     
@@ -27520,13 +27686,16 @@ end
 -- Initialize the UI
 HomeDashboardUi()
 
+-- Initialize Orion UI
+OrionLib:Init()
+
 -- END of HomeDashboardUi
 
 -- Initialize notification system
 LibraryNotify("🌟 ExoHub Premium loaded successfully!", 5)
 LibraryNotify("All systems ready - check each tab for features", 3)
 
-print("✅ ExoHub Premium with Obsidian UI loaded successfully!")
+print("✅ ExoHub Premium with Orion UI loaded successfully!")
 print("   🌟 All advanced features available")
 print("   🐾 Pet management, hatching, farming, mutation systems ready")
 print("   ⚙️ Check Settings tab for configuration options")
