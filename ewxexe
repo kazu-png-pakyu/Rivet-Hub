@@ -7,11 +7,16 @@
 -- Reset run guard so it can always re-execute
 _G.rivethub2_running = nil
 
--- Destroy old GUI if it exists
+-- Destroy old GUI if it exists (checks both CoreGui and PlayerGui)
+pcall(function()
+	local coreGui = game:GetService("CoreGui")
+	local old = coreGui:FindFirstChild("RivetHub2")
+	if old then old:Destroy() end
+end)
 pcall(function()
 	local old = game:GetService("Players").LocalPlayer
 		:FindFirstChild("PlayerGui")
-		:FindFirstChild("RivetHub2")
+		and game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("RivetHub2")
 	if old then old:Destroy() end
 end)
 
@@ -24,7 +29,7 @@ local TeleportService    = game:GetService("TeleportService")
 local TweenService       = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+local character = player.Character
 
 -- ===== SAFE REMOTE LOADER =====
 local function safeFind(parent, name)
@@ -284,7 +289,7 @@ if p ~= player then table.insert(list, p.Name) end
 end
 return list
 end
-﻿-- ===== SCAN BOOTHS =====
+-- ===== SCAN BOOTHS =====
 local function scanBooths()
 boothsData     = {}
 stats.totalScans += 1
@@ -964,10 +969,22 @@ end
 task.wait(1)
 end
 end
-﻿-- ============================================================
+-- ============================================================
 -- CUSTOM GUI ENGINE (Obsidian-style, pure Roblox Instances)
 -- ============================================================
-local playerGui = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui")
+local playerGui = nil
+-- Delta on mobile needs CoreGui, not PlayerGui
+pcall(function()
+	playerGui = game:GetService("CoreGui")
+end)
+if not playerGui then
+	pcall(function()
+		playerGui = player:FindFirstChild("PlayerGui")
+	end)
+end
+if not playerGui then
+	playerGui = player.PlayerGui
+end
 
 -- ===== THEME =====
 local THEME = {
