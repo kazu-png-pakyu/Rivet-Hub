@@ -178,20 +178,25 @@ _S.invite_link_url = ""
 _S.invite_link_short = ""
 
 
--- [SETUP UI] - Using Orion UI Library (Reliable and Working)
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+-- [SETUP UI] - Using Fluent UI Library (Reliable and Working)
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
-if not OrionLib then
-    print("Orion UI Library failed to load. Stopping")
+if not Fluent then
+    print("Fluent UI Library failed to load. Stopping")
     return
 end
 
 -- Create Window
-local Window = OrionLib:MakeWindow({
-    Name = "🌟 ExoHub Premium - Grow a Garden", 
-    HidePremium = false, 
-    SaveConfig = true, 
-    ConfigFolder = "ExoHubConfig"
+local Window = Fluent:CreateWindow({
+    Title = "🌟 ExoHub Premium - Grow a Garden",
+    SubTitle = "by ExoHub Team",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 -- #start
@@ -27235,13 +27240,12 @@ end
 
 
 
--- Notification wrapper for Orion UI compatibility
+-- Notification wrapper for Fluent UI compatibility
 local function LibraryNotify(message, duration)
-    OrionLib:MakeNotification({
-        Name = "ExoHub",
+    Fluent:Notify({
+        Title = "ExoHub",
         Content = tostring(message),
-        Image = "rbxassetid://4483362458",
-        Time = duration or 3
+        Duration = duration or 3
     })
     print("📢 ExoHub: " .. tostring(message))
 end
@@ -27251,41 +27255,14 @@ if not Library then Library = {} end
 Library.Notify = LibraryNotify
 
 -- Create main tabs
-local HomeTab = Window:MakeTab({
-    Name = "🏠 Home",
-    Icon = "rbxassetid://4483362458",
-    PremiumOnly = false
-})
-
-local PetsTab = Window:MakeTab({
-    Name = "🐾 Pet Management", 
-    Icon = "rbxassetid://4483362458",
-    PremiumOnly = false
-})
-
-local HatchingTab = Window:MakeTab({
-    Name = "🥚 Hatching",
-    Icon = "rbxassetid://4483362458", 
-    PremiumOnly = false
-})
-
-local FarmingTab = Window:MakeTab({
-    Name = "🌱 Farming",
-    Icon = "rbxassetid://4483362458",
-    PremiumOnly = false
-})
-
-local MutationTab = Window:MakeTab({
-    Name = "🧬 Mutation",
-    Icon = "rbxassetid://4483362458",
-    PremiumOnly = false
-})
-
-local SettingsTab = Window:MakeTab({
-    Name = "⚙️ Settings",
-    Icon = "rbxassetid://4483362458",
-    PremiumOnly = false
-})
+local Tabs = {
+    Home = Window:AddTab({ Title = "🏠 Home", Icon = "home" }),
+    Pets = Window:AddTab({ Title = "🐾 Pet Management", Icon = "heart" }),
+    Hatching = Window:AddTab({ Title = "🥚 Hatching", Icon = "egg" }),
+    Farming = Window:AddTab({ Title = "🌱 Farming", Icon = "sprout" }),
+    Mutation = Window:AddTab({ Title = "🧬 Mutation", Icon = "dna" }),
+    Settings = Window:AddTab({ Title = "⚙️ Settings", Icon = "settings" })
+}
 
 -- #homeui
 -- HomeDashboardUi =======================================
