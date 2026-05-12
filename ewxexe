@@ -2,16 +2,18 @@
 -- ============================================================
 -- RIVET HUB MAIN 2 - Grow a Garden Full Automation Hub
 -- Pure Roblox Instance GUI | Delta Executor Compatible
--- All WaitForChild replaced with safe pcall FindFirstChild
 -- ============================================================
 
--- Safe load guard (non-blocking)
+-- Reset run guard so it can always re-execute
+_G.rivethub2_running = nil
+
+-- Destroy old GUI if it exists
 pcall(function()
-	if _G.rivethub2_running then
-		warn("Rivet Hub 2 already running!")
-	end
+	local old = game:GetService("Players").LocalPlayer
+		:FindFirstChild("PlayerGui")
+		:FindFirstChild("RivetHub2")
+	if old then old:Destroy() end
 end)
-_G.rivethub2_running = true
 
 -- ===== SERVICES =====
 local Players            = game:GetService("Players")
