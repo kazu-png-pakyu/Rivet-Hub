@@ -273,35 +273,42 @@ end
 
 
 -- ================================================================
---  GUI — Lambwee X Turnilyo
---        ZapHub-style card layout, always 100%×100%, scale-only sizing
+--  GUI — Kaitun Snipe  (compact floating panel)
 --
---  Card layout (top → bottom):
---    HEADER         – title + session timer
---    BOX 1          – 🪙 Tokens Left  (live from account)
---    BOX 2          – 🐾 Pets Counter (all pets with kg+age)
---    BOX 3          – 📡 Status       (scan / server hop / buy log)
---    BOX 4…N        – one row per CONFIG pet  (name · price · on/off)
+--  Layout (fixed pixel heights, left side of screen):
+--    HEADER  — title + session timer           (32px)
+--    ROW     — 🪙 Tokens  |  🐾 Pets           (28px)
+--    STATUS  — 📡 current action               (24px)
+--    DIVIDER — "WATCHING" label                (16px)
+--    PET ROW — one row per pet in CONFIG       (22px each)
+--
+--  The panel never covers the full screen.
+--  Notifications pop up top-right, small and self-dismissing.
 -- ================================================================
 local GUI = {}
 
 local C = {
-    bg       = Color3.fromRGB(8,  8,  8),
-    card     = Color3.fromRGB(16, 16, 16),
-    cardAlt  = Color3.fromRGB(13, 13, 13),
-    border   = Color3.fromRGB(40, 40, 40),
-    orange   = Color3.fromRGB(255, 145, 30),
-    orangeLo = Color3.fromRGB(90,  50,  10),
-    gold     = Color3.fromRGB(255, 215, 55),
-    cyan     = Color3.fromRGB(55,  210, 255),
-    green    = Color3.fromRGB(75,  220, 115),
-    greenLo  = Color3.fromRGB(25,  70,  40),
-    purple   = Color3.fromRGB(185, 135, 255),
-    white    = Color3.fromRGB(225, 225, 225),
-    muted    = Color3.fromRGB(95,  95,  95),
-    dimText  = Color3.fromRGB(50,  50,  50),
-    red      = Color3.fromRGB(255, 65,  65),
+    bg      = Color3.fromRGB(12, 12, 14),
+    card    = Color3.fromRGB(20, 20, 24),
+    border  = Color3.fromRGB(45, 45, 55),
+    orange  = Color3.fromRGB(255, 145, 30),
+    orangeLo= Color3.fromRGB(80,  45,  10),
+    gold    = Color3.fromRGB(255, 215, 55),
+    cyan    = Color3.fromRGB(55,  210, 255),
+    green   = Color3.fromRGB(75,  220, 115),
+    white   = Color3.fromRGB(220, 220, 220),
+    muted   = Color3.fromRGB(100, 100, 110),
+    dimText = Color3.fromRGB(55,  55,  65),
+    red     = Color3.fromRGB(255, 65,  65),
 }
+
+-- pixel heights
+local HDR_H    = 32
+local STAT_H   = 52   -- tokens+pets row + status row combined
+local DIV_H    = 18
+local PET_H    = 22
+local PANEL_W  = 220  -- panel width in pixels
+local PAD      = 8    -- left/top inset from screen edge
 
 local function F(parent, size, pos, color, transp)
     local f = Instance.new("Frame")
@@ -317,11 +324,17 @@ local function L(parent, text, size, pos, color, fs, bold, align)
     l.Size = size; l.Position = pos
     l.BackgroundTransparency = 1
     l.Text = text; l.TextColor3 = color
-    l.TextSize = fs or 12
+    l.TextSize = fs or 11
     l.Font = bold and Enum.Font.GothamBold or Enum.Font.Gotham
     l.TextXAlignment = align or Enum.TextXAlignment.Left
-    l.TextScaled = false; l.TextWrapped = true
+    l.TextScaled = false; l.TextWrapped = false
+    l.ClipsDescendants = false
     l.Parent = parent; return l
+end
+
+local function MakeCorner(parent, radius)
+    local c = Instance.new("UICorner", parent)
+    c.CornerRadius = UDim.new(0, radius or 4)
 end
 
 local function BuildGui()
@@ -329,211 +342,180 @@ local function BuildGui()
     local old = PlayerGui:FindFirstChild("KaitunGui")
     if old then old:Destroy() end
 
-    pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, false) end)
-
+    -- NOTE: we do NOT disable CoreGui — let the game UI show normally
     local screen = Instance.new("ScreenGui")
-    screen.Name = "KaitunGui"; screen.ResetOnSpawn = false
-    screen.IgnoreGuiInset = true; screen.DisplayOrder = 999
-    screen.Parent = PlayerGui
+    screen.Name            = "KaitunGui"
+    screen.ResetOnSpawn    = false
+    screen.IgnoreGuiInset  = false   -- respects the top bar inset
+    screen.DisplayOrder    = 10      -- low order so it doesn't block game UI
+    screen.Parent          = PlayerGui
 
-    -- Black backdrop
-    F(screen, UDim2.new(1,0,1,0), UDim2.new(0,0,0,0), C.bg)
-
-    -- ── Sort pets ─────────────────────────────────────────────────
+    -- ── Sort pets: enabled first, then alphabetical ────────────────
     local sortedPets = {}
     for name, cfg in pairs(CONFIG.find_settings) do
-        table.insert(sortedPets, {name=name, cfg=cfg})
+        table.insert(sortedPets, {name = name, cfg = cfg})
     end
-    table.sort(sortedPets, function(a,b)
+    table.sort(sortedPets, function(a, b)
         if a.cfg.enabled ~= b.cfg.enabled then return a.cfg.enabled end
         return a.name < b.name
     end)
-    local petCount = #sortedPets
 
-    -- ── Scale math ────────────────────────────────────────────────
-    -- Fixed sections (Y-scale):
-    --   header    0.10
-    --   box1      0.09   (tokens)
-    --   box2      0.09   (pets counter)
-    --   box3      0.11   (status – needs a bit more space for text)
-    --   divider   0.015
-    -- Total fixed = 0.405
-    -- Remaining  = 0.595 spread over petCount rows
-    local FIXED   = 0.405
-    local ROW_S   = (1 - FIXED) / math.max(petCount, 1)
+    -- ── Total panel height ─────────────────────────────────────────
+    local totalH = HDR_H + STAT_H + DIV_H + PET_H * #sortedPets + 4
 
-    -- ── Root ──────────────────────────────────────────────────────
-    local root = F(screen, UDim2.new(1,0,1,0), UDim2.new(0,0,0,0), C.bg)
+    -- ── Outer panel (rounded, semi-transparent background) ─────────
+    local panel = F(screen,
+        UDim2.new(0, PANEL_W, 0, totalH),
+        UDim2.new(0, PAD, 0, PAD),
+        C.bg)
+    MakeCorner(panel, 6)
+    -- subtle border via UIStroke
+    local stroke = Instance.new("UIStroke", panel)
+    stroke.Color     = C.border
+    stroke.Thickness = 1
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+    local yOff = 0  -- running pixel offset inside panel
 
     -- ================================================================
-    --  HEADER
+    --  HEADER ROW
     -- ================================================================
-    local hdr = F(root, UDim2.new(1,0,0.10,0), UDim2.new(0,0,0,0), C.card)
-    -- top orange stripe
-    F(hdr, UDim2.new(1,0,0,2), UDim2.new(0,0,0,0), C.orange)
+    local hdr = F(panel, UDim2.new(1, 0, 0, HDR_H), UDim2.new(0, 0, 0, yOff), C.card)
+    MakeCorner(hdr, 6)
+    -- orange accent left bar
+    F(hdr, UDim2.new(0, 3, 1, -4), UDim2.new(0, 0, 0, 2), C.orange)
 
-    -- 🌱 icon box
-    local iconBox = F(hdr, UDim2.new(0,26,0,26), UDim2.new(0,10,0.5,-13), C.orange)
-    Instance.new("UICorner", iconBox).CornerRadius = UDim.new(0,5)
-    L(iconBox, "🌱", UDim2.new(1,0,1,0), UDim2.new(0,0,0,0), C.white, 14, true, Enum.TextXAlignment.Center)
+    L(hdr, "🌱 Kaitun Snipe",
+        UDim2.new(1, -90, 1, 0), UDim2.new(0, 10, 0, 0),
+        C.white, 12, true, Enum.TextXAlignment.Left)
 
-    -- Title centered
-    L(hdr, "Lambwee X Turnilyo",
-        UDim2.new(1,-20,0.5,0), UDim2.new(0,10,0.08,0),
-        C.white, 15, true, Enum.TextXAlignment.Center)
-    L(hdr, "Grow a Garden  ·  Snipe Script",
-        UDim2.new(1,-20,0.3,0), UDim2.new(0,10,0.62,0),
-        C.orange, 9, false, Enum.TextXAlignment.Center)
-
-    -- Session timer top-right
     local timerLbl = L(hdr, "00:00:00",
-        UDim2.new(0.26,0,0.42,0), UDim2.new(0.73,0,0.06,0),
-        C.gold, 13, true, Enum.TextXAlignment.Right)
+        UDim2.new(0, 76, 1, 0), UDim2.new(1, -80, 0, 0),
+        C.gold, 11, true, Enum.TextXAlignment.Right)
     GUI.timer = timerLbl
-    L(hdr, "SESSION", UDim2.new(0.26,0,0.22,0), UDim2.new(0.73,0,0.56,0),
-        C.muted, 8, false, Enum.TextXAlignment.Right)
 
-    F(root, UDim2.new(1,0,0,1), UDim2.new(0,0,0.10,0), C.border)
+    yOff = yOff + HDR_H + 2
 
     -- ================================================================
-    --  BOX 1 — TOKEN COUNTER
+    --  TOKENS + PETS ROW  (two mini-boxes side by side)
     -- ================================================================
-    local b1 = F(root, UDim2.new(1,0,0.09,0), UDim2.new(0,0,0.101,0), C.cardAlt)
+    local rowH = 26
 
-    -- left colored tag bar
-    F(b1, UDim2.new(0,3,1,0), UDim2.new(0,0,0,0), C.cyan)
-
-    -- icon + label left side
-    L(b1, "🪙", UDim2.new(0,28,1,0), UDim2.new(0,10,0,0), C.white, 20, false, Enum.TextXAlignment.Center)
-    L(b1, "TOKENS LEFT",
-        UDim2.new(0.45,0,0.4,0), UDim2.new(0,44,0.05,0),
-        C.muted, 9, true, Enum.TextXAlignment.Left)
-
-    -- big value right side
-    local tokLbl = L(b1, "—",
-        UDim2.new(0.45,0,0.65,0), UDim2.new(0.52,0,0.18,0),
-        C.cyan, 22, true, Enum.TextXAlignment.Right)
+    -- Tokens box (left half)
+    local tokBox = F(panel, UDim2.new(0, PANEL_W/2 - 3, 0, rowH),
+        UDim2.new(0, 0, 0, yOff), C.card)
+    MakeCorner(tokBox, 4)
+    F(tokBox, UDim2.new(0, 3, 1, 0), UDim2.new(0, 0, 0, 0), C.cyan)
+    L(tokBox, "🪙 TOKENS", UDim2.new(1, -4, 0, 12), UDim2.new(0, 6, 0, 1), C.muted, 8, false)
+    local tokLbl = L(tokBox, "—", UDim2.new(1, -6, 0, 14), UDim2.new(0, 5, 0, 12),
+        C.cyan, 12, true, Enum.TextXAlignment.Left)
     GUI.tokensLeft = tokLbl
 
-    -- sub-label: "tokens spent this session"
-    local tokSpentSub = L(b1, "spent: 0",
-        UDim2.new(0.45,0,0.3,0), UDim2.new(0.52,0,0.68,0),
-        C.muted, 9, false, Enum.TextXAlignment.Right)
-    GUI.tokensSpentSub = tokSpentSub
-
-    F(root, UDim2.new(1,0,0,1), UDim2.new(0,0,0.191,0), C.border)
-
-    -- ================================================================
-    --  BOX 2 — PETS COUNTER
-    -- ================================================================
-    local b2 = F(root, UDim2.new(1,0,0.09,0), UDim2.new(0,0,0.192,0), C.card)
-
-    F(b2, UDim2.new(0,3,1,0), UDim2.new(0,0,0,0), C.green)
-
-    L(b2, "🐾", UDim2.new(0,28,1,0), UDim2.new(0,10,0,0), C.white, 20, false, Enum.TextXAlignment.Center)
-    L(b2, "PETS IN ACCOUNT",
-        UDim2.new(0.45,0,0.4,0), UDim2.new(0,44,0.05,0),
-        C.muted, 9, true, Enum.TextXAlignment.Left)
-    L(b2, "with kg + age",
-        UDim2.new(0.45,0,0.3,0), UDim2.new(0,44,0.58,0),
-        C.muted, 8, false, Enum.TextXAlignment.Left)
-
-    local petCountLbl = L(b2, "—",
-        UDim2.new(0.45,0,0.65,0), UDim2.new(0.52,0,0.18,0),
-        C.green, 22, true, Enum.TextXAlignment.Right)
+    -- Pets box (right half)
+    local petBox = F(panel, UDim2.new(0, PANEL_W/2 - 3, 0, rowH),
+        UDim2.new(0, PANEL_W/2 + 2, 0, yOff), C.card)
+    MakeCorner(petBox, 4)
+    F(petBox, UDim2.new(0, 3, 1, 0), UDim2.new(0, 0, 0, 0), C.green)
+    L(petBox, "🐾 PETS", UDim2.new(1, -4, 0, 12), UDim2.new(0, 6, 0, 1), C.muted, 8, false)
+    local petCountLbl = L(petBox, "—", UDim2.new(1, -6, 0, 14), UDim2.new(0, 5, 0, 12),
+        C.green, 12, true, Enum.TextXAlignment.Left)
     GUI.petCountLbl = petCountLbl
 
-    -- sub: sniped this session
-    local snipedSub = L(b2, "sniped: 0",
-        UDim2.new(0.45,0,0.3,0), UDim2.new(0.52,0,0.68,0),
-        C.muted, 9, false, Enum.TextXAlignment.Right)
+    yOff = yOff + rowH + 2
+
+    -- Spent / Sniped sub-row
+    local subRow = F(panel, UDim2.new(1, 0, 0, 14), UDim2.new(0, 0, 0, yOff), C.bg, 1)
+    local tokSpentSub = L(subRow, "spent: 0",
+        UDim2.new(0.5, -2, 1, 0), UDim2.new(0, 4, 0, 0),
+        C.muted, 9, false, Enum.TextXAlignment.Left)
+    GUI.tokensSpentSub = tokSpentSub
+    local snipedSub = L(subRow, "sniped: 0",
+        UDim2.new(0.5, -2, 1, 0), UDim2.new(0.5, 2, 0, 0),
+        C.muted, 9, false, Enum.TextXAlignment.Left)
     GUI.snipedSub = snipedSub
 
-    F(root, UDim2.new(1,0,0,1), UDim2.new(0,0,0.282,0), C.border)
+    yOff = yOff + 16
 
     -- ================================================================
-    --  BOX 3 — STATUS
+    --  STATUS ROW
     -- ================================================================
-    local b3 = F(root, UDim2.new(1,0,0.11,0), UDim2.new(0,0,0.283,0), C.cardAlt)
-
-    F(b3, UDim2.new(0,3,1,0), UDim2.new(0,0,0,0), C.orange)
-
-    L(b3, "📡", UDim2.new(0,28,0.45,0), UDim2.new(0,10,0.05,0), C.white, 18, false, Enum.TextXAlignment.Center)
-    L(b3, "STATUS",
-        UDim2.new(0.7,0,0.32,0), UDim2.new(0,44,0.04,0),
-        C.muted, 9, true, Enum.TextXAlignment.Left)
-
-    -- Main status line
-    local statusLbl = L(b3, "⏳ Starting...",
-        UDim2.new(1,-50,0.38,0), UDim2.new(0,44,0.36,0),
-        C.white, 12, false, Enum.TextXAlignment.Left)
+    local statBox = F(panel, UDim2.new(1, 0, 0, 26), UDim2.new(0, 0, 0, yOff), C.card)
+    MakeCorner(statBox, 4)
+    F(statBox, UDim2.new(0, 3, 1, 0), UDim2.new(0, 0, 0, 0), C.orange)
+    L(statBox, "STATUS", UDim2.new(0, 44, 0, 12), UDim2.new(0, 6, 0, 1), C.muted, 8, true)
+    local statusLbl = L(statBox, "⏳ Starting...",
+        UDim2.new(1, -56, 0, 14), UDim2.new(0, 52, 0, 6),
+        C.white, 10, false, Enum.TextXAlignment.Left)
     GUI.status = statusLbl
 
-    -- Last buy sub-line
-    local lastBuyLbl = L(b3, "No purchases yet",
-        UDim2.new(1,-50,0.26,0), UDim2.new(0,44,0.72,0),
+    yOff = yOff + 28
+
+    -- Last buy micro-line
+    local lastBuyLbl = L(panel, "No purchases yet",
+        UDim2.new(1, -8, 0, 12), UDim2.new(0, 6, 0, yOff),
         C.muted, 9, false, Enum.TextXAlignment.Left)
     GUI.lastBuy = lastBuyLbl
 
-    F(root, UDim2.new(1,0,0,1), UDim2.new(0,0,0.393,0), C.border)
+    yOff = yOff + 14
 
     -- ================================================================
-    --  SECTION HEADER — WATCHING
+    --  DIVIDER — "WATCHING"
     -- ================================================================
-    local watchY = 0.394
-    local WLBL_H = 0.012
-    local watchHdr = F(root, UDim2.new(1,0,WLBL_H,0), UDim2.new(0,0,watchY,0), C.bg)
-    F(watchHdr, UDim2.new(0,3,0.7,0), UDim2.new(0,8,0.15,0), C.orange)
-    L(watchHdr, "WATCHING PETS", UDim2.new(1,-22,1,0), UDim2.new(0,18,0,0),
-        C.orange, 9, true, Enum.TextXAlignment.Left)
+    local divLine = F(panel, UDim2.new(1, -12, 0, 1), UDim2.new(0, 6, 0, yOff), C.border)
+    yOff = yOff + 3
+    L(panel, "WATCHING PETS",
+        UDim2.new(1, -8, 0, 13), UDim2.new(0, 6, 0, yOff),
+        C.orange, 8, true, Enum.TextXAlignment.Left)
+    yOff = yOff + 15
 
     -- ================================================================
-    --  BOXES 4+ — ONE ROW PER PET
+    --  PET ROWS
     -- ================================================================
-    local rowY = watchY + WLBL_H
-
     for i, entry in ipairs(sortedPets) do
         local isOn  = entry.cfg.enabled
         local isAlt = i % 2 == 0
-        local row   = F(root, UDim2.new(1,0,ROW_S,0), UDim2.new(0,0,rowY,0),
-            isAlt and C.cardAlt or C.card)
 
-        -- left accent stripe (orange=active, dim=inactive)
-        F(row, UDim2.new(0,3,1,0), UDim2.new(0,0,0,0),
-            isOn and C.orange or C.border)
+        local row = F(panel, UDim2.new(1, 0, 0, PET_H),
+            UDim2.new(0, 0, 0, yOff),
+            isAlt and C.card or C.bg)
+
+        -- accent stripe
+        F(row, UDim2.new(0, 3, 1, 0), UDim2.new(0, 0, 0, 0),
+            isOn and C.orange or C.dimText)
 
         -- status dot
-        local dot = F(row, UDim2.new(0,7,0,7), UDim2.new(0,12,0.5,-3),
+        local dot = F(row, UDim2.new(0, 6, 0, 6), UDim2.new(0, 8, 0.5, -3),
             isOn and C.green or C.dimText)
-        Instance.new("UICorner", dot).CornerRadius = UDim.new(1,0)
+        MakeCorner(dot, 3)
 
         -- pet name
         L(row, entry.name,
-            UDim2.new(0.52,0,1,0), UDim2.new(0,26,0,0),
-            isOn and C.white or C.dimText, 12, isOn, Enum.TextXAlignment.Left)
+            UDim2.new(1, -70, 1, 0), UDim2.new(0, 20, 0, 0),
+            isOn and C.white or C.dimText, 10, isOn, Enum.TextXAlignment.Left)
 
         -- price badge
-        local priceBg = F(row, UDim2.new(0,54,0,18), UDim2.new(1,-62,0.5,-9),
-            isOn and C.orangeLo or C.border)
-        Instance.new("UICorner", priceBg).CornerRadius = UDim.new(0,4)
-        L(priceBg, "≤"..entry.cfg.price.." tkn",
-            UDim2.new(1,-4,1,0), UDim2.new(0,2,0,0),
-            isOn and C.gold or C.dimText, 9, true, Enum.TextXAlignment.Center)
+        local badge = F(row, UDim2.new(0, 52, 0, 14), UDim2.new(1, -56, 0.5, -7),
+            isOn and C.orangeLo or C.bg)
+        MakeCorner(badge, 3)
+        L(badge, "≤"..entry.cfg.price.." tkn",
+            UDim2.new(1, 0, 1, 0), UDim2.new(0, 0, 0, 0),
+            isOn and C.gold or C.dimText, 8, true, Enum.TextXAlignment.Center)
 
-        -- bottom divider
-        F(row, UDim2.new(1,-10,0,1), UDim2.new(0,5,1,-1), C.border)
-
-        rowY = rowY + ROW_S
+        yOff = yOff + PET_H
     end
 
-    -- ── NOTIFICATION CONTAINER ────────────────────────────────────
-    local notifContainer = F(screen, UDim2.new(0,300,0.45,0), UDim2.new(0.5,-150,0,8),
-        C.bg, 1)
-    notifContainer.Name = "NotifContainer"
+    -- ── NOTIFICATION CONTAINER (top-right, small) ──────────────────
+    local notifContainer = Instance.new("Frame")
+    notifContainer.Name                 = "NotifContainer"
+    notifContainer.Size                 = UDim2.new(0, 230, 0, 300)
+    notifContainer.Position             = UDim2.new(1, -238, 0, PAD)
+    notifContainer.BackgroundTransparency = 1
+    notifContainer.BorderSizePixel      = 0
+    notifContainer.Parent               = screen
     local nl = Instance.new("UIListLayout", notifContainer)
-    nl.SortOrder = Enum.SortOrder.LayoutOrder
-    nl.Padding = UDim.new(0,5)
-    nl.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    nl.SortOrder            = Enum.SortOrder.LayoutOrder
+    nl.Padding              = UDim.new(0, 4)
+    nl.HorizontalAlignment  = Enum.HorizontalAlignment.Right
     GUI.notifContainer = notifContainer
     GUI.notifIndex = 0
 
@@ -551,7 +533,7 @@ local function BuildGui()
                     math.floor(e/3600), math.floor((e%3600)/60), e%60)
             end
 
-            -- BOX 1: tokens left (refresh every 3s) + spent sub
+            -- tokens (refresh every 3s)
             tokenTick = tokenTick + 0.4
             if tokenTick >= 3 then
                 tokenTick = 0
@@ -566,7 +548,7 @@ local function BuildGui()
                 GUI.tokensSpentSub.Text = "spent: "..tostring(State.tokens_spent)
             end
 
-            -- BOX 2: pet count (refresh every 5s) + sniped sub
+            -- pet count (refresh every 5s)
             petTick = petTick + 0.4
             if petTick >= 5 then
                 petTick = 0
@@ -579,7 +561,7 @@ local function BuildGui()
                 GUI.snipedSub.Text = "sniped: "..tostring(State.snipe_count)
             end
 
-            -- BOX 3: status
+            -- status
             if GUI.status then
                 GUI.status.Text = State.status
             end
@@ -911,7 +893,6 @@ end)
 _G.kaitun_stop = function()
     State.enabled = false
     _G.kaitun_snipe_running = false
-    pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) end)
     print(string.format("[Kaitun] Stopped. Sniped: %d pets | Tokens spent: %d | Session: %ds",
         State.snipe_count, State.tokens_spent, os.time() - State.session_start))
 end
