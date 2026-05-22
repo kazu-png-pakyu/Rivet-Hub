@@ -276,15 +276,13 @@ local function Divider(parent, posY)
     return d
 end
 
-local function Card(parent, size, pos, bg, borderColor)
+local function Row(parent, posY, rowH)
     local f = Instance.new("Frame")
-    f.Size = size; f.Position = pos
-    f.BackgroundColor3 = bg; f.BorderSizePixel = 0; f.Parent = parent
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 12)
-    if borderColor then
-        local s = Instance.new("UIStroke", f)
-        s.Color = borderColor; s.Thickness = 1.2
-    end
+    f.Size = UDim2.new(1, 0, 0, rowH or 30)
+    f.Position = UDim2.new(0, 0, 0, posY)
+    f.BackgroundTransparency = 1
+    f.BorderSizePixel = 0
+    f.Parent = parent
     return f
 end
 
@@ -301,120 +299,16 @@ local function BuildGui()
     screen.IgnoreGuiInset = true; screen.DisplayOrder = 999
     screen.Parent = PlayerGui
 
-    -- ── Full-screen dark backdrop (always on) ──────────────────
+    -- ── Full-screen solid dark backdrop ───────────────────────
     local backdrop = Instance.new("Frame")
     backdrop.Size = UDim2.new(1,0,1,0)
     backdrop.BackgroundColor3 = Color3.fromRGB(0,0,0)
-    backdrop.BackgroundTransparency = 0.45
+    backdrop.BackgroundTransparency = 0
     backdrop.BorderSizePixel = 0
     backdrop.Parent = screen
 
-    -- ── Main HUD panel — right side, fixed ────────────────────
-    -- Panel height adjusts based on number of pets
-    local petCount = 0
-    for _ in pairs(CONFIG.find_settings) do petCount = petCount + 1 end
-    local PET_ROW_H   = 22
-    local PANEL_W     = 270
-    -- sections: header(52) + cards(64) + spent-row(30) + div+status(58) + div+log(106) + div+petlist + padding
-    local PET_SECTION = 20 + petCount * PET_ROW_H
-    local PANEL_H     = 52 + 64 + 30 + 58 + 106 + 16 + PET_SECTION + 20
-
-    local panel = Instance.new("Frame")
-    panel.Name = "Panel"
-    panel.Size = UDim2.new(0, PANEL_W, 0, PANEL_H)
-    panel.Position = UDim2.new(1, -(PANEL_W+10), 0.5, -(PANEL_H/2))
-    panel.BackgroundColor3 = Color3.fromRGB(11, 13, 11)
-    panel.BackgroundTransparency = 0
-    panel.BorderSizePixel = 0
-    panel.Parent = screen
-    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 18)
-    local ps = Instance.new("UIStroke", panel)
-    ps.Color = Color3.fromRGB(0, 200, 85); ps.Thickness = 1.8
-
-    -- ── Header bar ────────────────────────────────────────────
-    local header = Instance.new("Frame")
-    header.Size = UDim2.new(1,0,0,52)
-    header.BackgroundColor3 = Color3.fromRGB(0,150,65)
-    header.BorderSizePixel = 0; header.Parent = panel
-    Instance.new("UICorner", header).CornerRadius = UDim.new(0,18)
-    -- fill bottom corners of header
-    local hBot = Instance.new("Frame", header)
-    hBot.Size = UDim2.new(1,0,0.5,0); hBot.Position = UDim2.new(0,0,0.5,0)
-    hBot.BackgroundColor3 = Color3.fromRGB(0,150,65); hBot.BorderSizePixel = 0
-
-    Lbl(header,"🎯  KAITUN SNIPE",UDim2.new(1,-16,0,24),UDim2.new(0,14,0,4),
-        Color3.fromRGB(255,255,255),15,true,Enum.TextXAlignment.Left)
-    Lbl(header,"Grow a Garden  •  ⚡FPS "..CONFIG.fps_cap,UDim2.new(0.6,0,0,14),UDim2.new(0,14,0,30),
-        Color3.fromRGB(190,255,210),10,false,Enum.TextXAlignment.Left)
-    local timerLbl = Lbl(header,"⏱ 00:00:00",UDim2.new(0.38,0,0,14),UDim2.new(0.6,-4,0,30),
-        Color3.fromRGB(255,230,120),10,true,Enum.TextXAlignment.Right)
-    GUI.timer = timerLbl
-
-    -- ── Counter cards: SNIPED | TOKENS LEFT ───────────────────
-    local y = 60
-
-    local snapCard = Card(panel, UDim2.new(0.47,-8,0,58), UDim2.new(0,10,0,y),
-        Color3.fromRGB(18,38,22), Color3.fromRGB(0,180,75))
-    Lbl(snapCard,"SNIPED",UDim2.new(1,0,0,16),UDim2.new(0,0,0,5),
-        Color3.fromRGB(0,200,85),9,false,Enum.TextXAlignment.Center)
-    local counterLbl = Lbl(snapCard,"0",UDim2.new(1,0,0,30),UDim2.new(0,0,0,20),
-        Color3.fromRGB(255,225,50),26,true,Enum.TextXAlignment.Center)
-    GUI.counter = counterLbl
-
-    local leftCard = Card(panel, UDim2.new(0.47,-8,0,58), UDim2.new(0.5,4,0,y),
-        Color3.fromRGB(15,30,45), Color3.fromRGB(50,180,255))
-    Lbl(leftCard,"TOKENS LEFT",UDim2.new(1,0,0,16),UDim2.new(0,0,0,5),
-        Color3.fromRGB(80,190,255),9,false,Enum.TextXAlignment.Center)
-    local tokensLeftLbl = Lbl(leftCard,"—",UDim2.new(1,0,0,30),UDim2.new(0,0,0,20),
-        Color3.fromRGB(255,255,255),26,true,Enum.TextXAlignment.Center)
-    GUI.tokensLeft = tokensLeftLbl
-
-    y = y + 64
-
-    -- ── Tokens spent slim row ─────────────────────────────────
-    local spentRow = Card(panel, UDim2.new(1,-20,0,24), UDim2.new(0,10,0,y),
-        Color3.fromRGB(20,18,38), Color3.fromRGB(100,80,220))
-    Lbl(spentRow,"💸 TOKENS SPENT:",UDim2.new(0.55,0,1,0),UDim2.new(0,8,0,0),
-        Color3.fromRGB(160,140,255),11,false,Enum.TextXAlignment.Left)
-    local tokensSpentLbl = Lbl(spentRow,"0",UDim2.new(0.4,0,1,0),UDim2.new(0.58,0,0,0),
-        Color3.fromRGB(255,210,255),11,true,Enum.TextXAlignment.Right)
-    GUI.tokens = tokensSpentLbl
-
-    y = y + 30
-    Divider(panel, y); y = y + 8
-
-    -- ── Status ────────────────────────────────────────────────
-    Lbl(panel,"STATUS",UDim2.new(1,-20,0,12),UDim2.new(0,12,0,y),
-        Color3.fromRGB(90,90,90),9,false)
-    y = y + 13
-    local statusLbl = Lbl(panel,"⏳ Starting...",UDim2.new(1,-20,0,36),UDim2.new(0,12,0,y),
-        Color3.fromRGB(210,210,210),11,false)
-    GUI.status = statusLbl
-    y = y + 38
-
-    Divider(panel, y); y = y + 8
-
-    -- ── Recent snipes log ─────────────────────────────────────
-    Lbl(panel,"RECENT SNIPES",UDim2.new(1,-20,0,13),UDim2.new(0,12,0,y),
-        Color3.fromRGB(90,90,90),9,false)
-    y = y + 14
-    GUI.logLabels = {}
-    for i = 1, 5 do
-        local row = Lbl(panel, "—", UDim2.new(1,-20,0,17), UDim2.new(0,12,0,y+(i-1)*18),
-            i==1 and Color3.fromRGB(255,225,50) or Color3.fromRGB(155,155,155),
-            11, i==1, Enum.TextXAlignment.Left)
-        GUI.logLabels[i] = row
-    end
-    y = y + 5*18 + 4
-
-    Divider(panel, y); y = y + 8
-
-    -- ── Pet list ──────────────────────────────────────────────
-    Lbl(panel,"PET LIST",UDim2.new(1,-20,0,13),UDim2.new(0,12,0,y),
-        Color3.fromRGB(90,90,90),9,false)
-    y = y + 14
-
-    -- sort: enabled first, then disabled
+    -- ── Compute panel height from content ─────────────────────
+    local ROW_H = 28   -- each list row height
     local sortedPets = {}
     for name, cfg in pairs(CONFIG.find_settings) do
         table.insert(sortedPets, {name=name, cfg=cfg})
@@ -423,92 +317,199 @@ local function BuildGui()
         if a.cfg.enabled ~= b.cfg.enabled then return a.cfg.enabled end
         return a.name < b.name
     end)
+    local petCount = #sortedPets
+    -- sections: topbar(44) + statsbar(36) + divider(1) + secLabel(22) + pets
+    --           + divider(1) + secLabel(22) + 3 log rows + secLabel(22) + 1 status row + padding(10)
+    local PANEL_H = 44 + 36 + 1 + 22 + petCount*ROW_H + 1 + 22 + 3*ROW_H + 22 + ROW_H + 10
 
-    GUI.petRows = {}
-    for i, entry in ipairs(sortedPets) do
-        local isOn = entry.cfg.enabled
-        -- dot indicator
-        local dot = Instance.new("Frame")
-        dot.Size = UDim2.new(0,7,0,7)
-        dot.Position = UDim2.new(0,12,0, y + (i-1)*PET_ROW_H + 7)
-        dot.BackgroundColor3 = isOn and Color3.fromRGB(0,220,85) or Color3.fromRGB(80,80,80)
-        dot.BorderSizePixel = 0; dot.Parent = panel
-        Instance.new("UICorner",dot).CornerRadius = UDim.new(1,0)
+    -- ── Bottom-anchored full-width panel ──────────────────────
+    local panel = Instance.new("Frame")
+    panel.Name = "Panel"
+    panel.Size = UDim2.new(1, 0, 0, PANEL_H)
+    panel.Position = UDim2.new(0, 0, 1, -PANEL_H)
+    panel.BackgroundColor3 = Color3.fromRGB(10, 11, 10)
+    panel.BackgroundTransparency = 0
+    panel.BorderSizePixel = 0
+    panel.Parent = screen
+    -- only round the top two corners
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 20)
+    local sqFill = Instance.new("Frame", panel)
+    sqFill.Size = UDim2.new(1,0,0.5,0); sqFill.Position = UDim2.new(0,0,0.5,0)
+    sqFill.BackgroundColor3 = Color3.fromRGB(10,11,10); sqFill.BorderSizePixel = 0
 
-        -- pet name
-        Lbl(panel, entry.name,
-            UDim2.new(0.62,0,0,PET_ROW_H-2), UDim2.new(0,24,0, y+(i-1)*PET_ROW_H),
-            isOn and Color3.fromRGB(230,230,230) or Color3.fromRGB(100,100,100),
-            11, isOn, Enum.TextXAlignment.Left)
+    -- top green accent line
+    local accentLine = Instance.new("Frame", panel)
+    accentLine.Size = UDim2.new(0.25, 0, 0, 3)
+    accentLine.Position = UDim2.new(0.375, 0, 0, 0)
+    accentLine.BackgroundColor3 = Color3.fromRGB(0, 215, 90)
+    accentLine.BorderSizePixel = 0
+    Instance.new("UICorner", accentLine).CornerRadius = UDim.new(0, 2)
 
-        -- price cap
-        Lbl(panel, "≤"..tostring(entry.cfg.price).." tkn",
-            UDim2.new(0.35,0,0,PET_ROW_H-2), UDim2.new(0.63,0,0, y+(i-1)*PET_ROW_H),
-            isOn and Color3.fromRGB(255,210,50) or Color3.fromRGB(80,80,80),
-            10, false, Enum.TextXAlignment.Right)
+    -- ── TOP BAR: title left | timer right ─────────────────────
+    local y = 6
+    Lbl(panel, "🎯  Kaitun Snipe",
+        UDim2.new(0.5, 0, 0, 22), UDim2.new(0, 14, 0, y),
+        Color3.fromRGB(255,255,255), 14, true, Enum.TextXAlignment.Left)
+    Lbl(panel, "Grow a Garden  •  ⚡"..CONFIG.fps_cap.."fps",
+        UDim2.new(0.5, 0, 0, 15), UDim2.new(0, 14, 0, y+22),
+        Color3.fromRGB(100, 100, 100), 10, false, Enum.TextXAlignment.Left)
+    local timerLbl = Lbl(panel, "00:00:00",
+        UDim2.new(0.38, 0, 0, 38), UDim2.new(0.6, -10, 0, y),
+        Color3.fromRGB(255, 220, 80), 22, true, Enum.TextXAlignment.Right)
+    GUI.timer = timerLbl
+    Lbl(panel, "SESSION",
+        UDim2.new(0.38, 0, 0, 14), UDim2.new(0.6, -10, 0, y+26),
+        Color3.fromRGB(80, 80, 80), 9, false, Enum.TextXAlignment.Right)
+
+    -- ── STATS BAR: 3 columns ──────────────────────────────────
+    y = 44
+    local statsBar = Instance.new("Frame", panel)
+    statsBar.Size = UDim2.new(1, 0, 0, 36)
+    statsBar.Position = UDim2.new(0, 0, 0, y)
+    statsBar.BackgroundColor3 = Color3.fromRGB(16, 18, 16)
+    statsBar.BorderSizePixel = 0
+
+    local function StatCol(xScale, label, valColor)
+        Lbl(statsBar, label,
+            UDim2.new(0.33, 0, 0, 13), UDim2.new(xScale, 0, 0, 3),
+            Color3.fromRGB(80,80,80), 9, false, Enum.TextXAlignment.Center)
+        local v = Lbl(statsBar, "0",
+            UDim2.new(0.33, 0, 0, 18), UDim2.new(xScale, 0, 0, 16),
+            valColor, 14, true, Enum.TextXAlignment.Center)
+        return v
+    end
+    GUI.counter    = StatCol(0,    "SNIPED",       Color3.fromRGB(255, 220, 50))
+    GUI.tokensLeft = StatCol(0.33, "TOKENS LEFT",  Color3.fromRGB(80,  200, 255))
+    GUI.tokens     = StatCol(0.66, "TOKENS SPENT", Color3.fromRGB(200, 160, 255))
+
+    -- column separators
+    for _, xp in ipairs({0.33, 0.66}) do
+        local sep = Instance.new("Frame", statsBar)
+        sep.Size = UDim2.new(0, 1, 0.7, 0); sep.Position = UDim2.new(xp, 0, 0.15, 0)
+        sep.BackgroundColor3 = Color3.fromRGB(35,35,35); sep.BorderSizePixel = 0
     end
 
-    -- ── Notification container (top-center) ───────────────────
+    y = y + 36
+
+    -- ── SECTION HELPER ────────────────────────────────────────
+    local function SectionLabel(text, posY)
+        local bar = Instance.new("Frame", panel)
+        bar.Size = UDim2.new(1, 0, 0, 22)
+        bar.Position = UDim2.new(0, 0, 0, posY)
+        bar.BackgroundColor3 = Color3.fromRGB(14, 16, 14)
+        bar.BorderSizePixel = 0
+        Lbl(bar, text, UDim2.new(1,-16,1,0), UDim2.new(0,14,0,0),
+            Color3.fromRGB(0, 200, 80), 10, true, Enum.TextXAlignment.Left)
+        return bar
+    end
+
+    local function ListRow(posY, dotColor, nameText, rightText, nameColor, rightColor)
+        local r = Row(panel, posY, ROW_H)
+        -- dot
+        local dot = Instance.new("Frame", r)
+        dot.Size = UDim2.new(0, 6, 0, 6)
+        dot.Position = UDim2.new(0, 14, 0.5, -3)
+        dot.BackgroundColor3 = dotColor
+        dot.BorderSizePixel = 0
+        Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+        -- name
+        Lbl(r, nameText, UDim2.new(0.62, 0, 1, 0), UDim2.new(0, 26, 0, 0),
+            nameColor or Color3.fromRGB(210,210,210), 12, false, Enum.TextXAlignment.Left)
+        -- right value
+        local rv = Lbl(r, rightText or "", UDim2.new(0.3, 0, 1, 0), UDim2.new(0.68, 0, 0, 0),
+            rightColor or Color3.fromRGB(140,140,140), 11, false, Enum.TextXAlignment.Right)
+        -- subtle separator at bottom
+        local sep = Instance.new("Frame", r)
+        sep.Size = UDim2.new(1, -14, 0, 1); sep.Position = UDim2.new(0, 14, 1, -1)
+        sep.BackgroundColor3 = Color3.fromRGB(20,22,20); sep.BorderSizePixel = 0
+        return rv
+    end
+
+    -- ── WATCHING section (pet list) ───────────────────────────
+    SectionLabel("WATCHING", y); y = y + 22
+
+    for _, entry in ipairs(sortedPets) do
+        local isOn = entry.cfg.enabled
+        ListRow(y,
+            isOn and Color3.fromRGB(0,215,85) or Color3.fromRGB(50,50,50),
+            entry.name,
+            "≤"..entry.cfg.price.." tkn",
+            isOn and Color3.fromRGB(220,220,220) or Color3.fromRGB(70,70,70),
+            isOn and Color3.fromRGB(255,210,50) or Color3.fromRGB(60,60,60))
+        y = y + ROW_H
+    end
+
+    -- ── RECENT SNIPES section ─────────────────────────────────
+    SectionLabel("RECENT SNIPES", y); y = y + 22
+
+    GUI.logLabels = {}
+    for i = 1, 3 do
+        GUI.logLabels[i] = ListRow(y,
+            Color3.fromRGB(0,150,60), "—", "",
+            Color3.fromRGB(180,180,180), Color3.fromRGB(120,120,120))
+        y = y + ROW_H
+    end
+
+    -- ── STATUS section ────────────────────────────────────────
+    SectionLabel("STATUS", y); y = y + 22
+
+    local statusLbl = Lbl(panel, "⏳ Starting...",
+        UDim2.new(1,-20,0,ROW_H), UDim2.new(0,14,0,y),
+        Color3.fromRGB(200,200,200), 11, false, Enum.TextXAlignment.Left)
+    GUI.status = statusLbl
+
+    -- ── Notification container (top-center, floats above panel)
     local notifContainer = Instance.new("Frame")
     notifContainer.Name = "NotifContainer"
-    notifContainer.Size = UDim2.new(0,320,1,0)
-    notifContainer.Position = UDim2.new(0.5,-160,0,10)
+    notifContainer.Size = UDim2.new(0, 320, 1, 0)
+    notifContainer.Position = UDim2.new(0.5, -160, 0, 8)
     notifContainer.BackgroundTransparency = 1
     notifContainer.BorderSizePixel = 0
     notifContainer.Parent = screen
     local nl = Instance.new("UIListLayout", notifContainer)
     nl.SortOrder = Enum.SortOrder.LayoutOrder
-    nl.Padding = UDim.new(0,6)
+    nl.Padding = UDim.new(0, 6)
     nl.HorizontalAlignment = Enum.HorizontalAlignment.Center
     GUI.notifContainer = notifContainer
     GUI.notifIndex = 0
 
     -- ── Live update loop ──────────────────────────────────────
-    local tokenRefreshTick = 0
+    local tokenTick = 0
     task.spawn(function()
         while State.enabled do
             task.wait(0.4)
 
-            -- snipe counter
-            if GUI.counter then GUI.counter.Text = tostring(State.snipe_count) end
-            -- tokens spent
-            if GUI.tokens  then GUI.tokens.Text  = tostring(State.tokens_spent) end
-            -- status
-            if GUI.status  then GUI.status.Text  = State.status end
+            if GUI.counter    then GUI.counter.Text    = tostring(State.snipe_count)  end
+            if GUI.tokens     then GUI.tokens.Text     = tostring(State.tokens_spent) end
+            if GUI.status     then GUI.status.Text     = State.status                 end
 
-            -- session timer (persistent across rejoins)
+            -- session timer
             if GUI.timer then
-                local elapsed = os.time() - State.session_start
-                local h = math.floor(elapsed / 3600)
-                local m = math.floor((elapsed % 3600) / 60)
-                local s = elapsed % 60
-                GUI.timer.Text = string.format("⏱ %02d:%02d:%02d", h, m, s)
+                local e = os.time() - State.session_start
+                GUI.timer.Text = string.format("%02d:%02d:%02d",
+                    math.floor(e/3600), math.floor((e%3600)/60), e%60)
             end
 
-            -- tokens left — refresh live every 3 seconds
-            tokenRefreshTick = tokenRefreshTick + 0.4
-            if tokenRefreshTick >= 3 then
-                tokenRefreshTick = 0
-                task.spawn(function()
-                    State.tokens_left = GetMyTokens()
-                end)
+            -- tokens left (live, every 3 s)
+            tokenTick = tokenTick + 0.4
+            if tokenTick >= 3 then
+                tokenTick = 0
+                task.spawn(function() State.tokens_left = GetMyTokens() end)
             end
             if GUI.tokensLeft then
                 GUI.tokensLeft.Text = tostring(State.tokens_left)
-                -- colour goes red when low
                 GUI.tokensLeft.TextColor3 = (State.tokens_left < 20)
-                    and Color3.fromRGB(255, 80, 80)
-                    or  Color3.fromRGB(255, 255, 255)
+                    and Color3.fromRGB(255,70,70) or Color3.fromRGB(80,200,255)
             end
 
-            -- recent snipes log
+            -- recent snipes log (3 rows)
             if GUI.logLabels then
-                for i = 1, 5 do
-                    local entry = State.snipe_log[i]
-                    GUI.logLabels[i].Text = entry or "—"
-                    GUI.logLabels[i].TextColor3 = (i==1 and entry)
-                        and Color3.fromRGB(255,225,50) or Color3.fromRGB(155,155,155)
-                    GUI.logLabels[i].Font = (i==1 and entry)
+                for i = 1, 3 do
+                    local e = State.snipe_log[i]
+                    GUI.logLabels[i].Text = e or "—"
+                    GUI.logLabels[i].TextColor3 = (i==1 and e)
+                        and Color3.fromRGB(255,220,50) or Color3.fromRGB(160,160,160)
+                    GUI.logLabels[i].Font = (i==1 and e)
                         and Enum.Font.GothamBold or Enum.Font.Gotham
                 end
             end
@@ -784,6 +785,14 @@ task.spawn(function()
                 -- BuyListing does a live token check inside before calling remote
                 local success = Finder.BuyListing(listing.owner, listId, listingPrice)
 
+                -- Auto-retry once on failure (covers brief network blips)
+                if not success then
+                    SetStatus("⚠️ Buy failed — retrying in 1.5s...")
+                    Notify("⚠️ Buy failed: "..petName.."\nRetrying once...", "yellow", 3)
+                    task.wait(1.5)
+                    success = Finder.BuyListing(listing.owner, listId, listingPrice)
+                end
+
                 if success then
                     State.snipe_count  = State.snipe_count + 1
                     State.tokens_spent = State.tokens_spent + listingPrice
@@ -798,7 +807,8 @@ task.spawn(function()
                         State.snipe_count, petName, listingPrice, tonumber(listing.weight) or 0
                     ), "green", 6)
                 else
-                    Notify("⚠️ Buy failed for "..petName.."\nRetrying next cycle", "yellow", 4)
+                    SetStatus("❌ Retry also failed: " .. petName)
+                    Notify("❌ Both attempts failed: "..petName.."\nListing may be gone", "red", 5)
                 end
 
                 task.wait(CONFIG.buy_cooldown)
