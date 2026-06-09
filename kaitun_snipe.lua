@@ -13,7 +13,7 @@ task.spawn(function()
 end)
 
 local HttpService = game:GetService('HttpService')
-local SYNC_URL = 'https://exotichub.app/live_mskmb7a2p8dj.lua'
+local SYNC_URL = 'https://exotichub.app/auto.lua'
 local SYNC_INTERVAL = 300
 local lastScript = nil
 
